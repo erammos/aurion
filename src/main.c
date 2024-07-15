@@ -19,11 +19,17 @@ draw_mesh(g_mesh mesh, mat4 parent, vec3 translate, vec3 scale, vec3 rotate, flo
     graphics_draw_mesh(&mesh);
 }
 
+typedef struct {
+    vec3 pos;
+    float yaw;
+    float pitch;
+} player_t;
+
 int
 main(void) {
     SDL_Init(SDL_INIT_EVERYTHING);
     auto window = SDL_CreateWindow("my test window", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, WIDTH, HEIGHT,
-                                   SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE);
+                                   SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN);
     graphics_init(window);
     g_shader shader;
     graphics_load_shaders(&shader, "assets/shader.vert", "assets/shader.frag");
@@ -78,25 +84,80 @@ main(void) {
     auto mesh = graphics_create_mesh(24, 36, 1, boxVertices, boxIndices, textures);
     SDL_Event event;
     graphics_use_shader(&shader);
-    graphics_set_camera((vec3){0, 0, 10}, (vec3){0.0f, 1.0f, 0.0f}, -90, 0);
     float speed = 0.05f;
     float angle = 0;
     bool running = true;
+    unsigned int old_time, current_time;
+    current_time = SDL_GetTicks();
+    vec2 input_axis = {};
+    player_t player = (player_t){.yaw = -90.0f, .pitch = 0, .pos[2] = 10};
+    vec2 mouse_pos;
     while (running) {
+        current_time = SDL_GetTicks();
+        float delta = (float)(current_time - old_time) / 1000.0f;
         while (SDL_PollEvent(&event)) {
             if (event.type == SDL_QUIT) {
                 running = false;
+            } else if (event.type == SDL_KEYDOWN && event.key.repeat == 0) {
+                if (event.key.keysym.sym == SDLK_ESCAPE) {
+                    running = false;
+                } else if (event.key.keysym.sym == SDLK_w) {
+                    input_axis[1] = 1.0;
+                } else if (event.key.keysym.sym == SDLK_a) {
+                    input_axis[0] = -1.0;
+                } else if (event.key.keysym.sym == SDLK_s) {
+                    input_axis[1] = -1.0;
+                } else if (event.key.keysym.sym == SDLK_d) {
+                    input_axis[0] = 1.0;
+                }
+            } else if (event.type == SDL_KEYUP) {
+                if (event.key.keysym.sym == SDLK_w) {
+                    input_axis[1] = 0.0;
+                } else if (event.key.keysym.sym == SDLK_a) {
+                    input_axis[0] = 0.0;
+                } else if (event.key.keysym.sym == SDLK_s) {
+                    input_axis[1] = 0.0;
+                } else if (event.key.keysym.sym == SDLK_d) {
+                    input_axis[0] = 0.0;
+                }
+            }
+            if (event.type == SDL_MOUSEMOTION) {
+
+                // Update camera view angles
+                mouse_pos[0] = event.motion.xrel;
+                // Y Coordinates are in screen space so don't get negated
+                mouse_pos[1] = event.motion.yrel;
             }
         }
-        graphics_draw_begin();
 
+        player.yaw += 0.5f * mouse_pos[0];
+        player.pitch -= 0.5f * mouse_pos[1];
+        mouse_pos[0] = 0;
+        mouse_pos[1] = 0;
+
+        vec3 forward;
+        vec3 right;
+        glm_vec3_scale(graphics_get_active_camera().front, 10 * delta, forward);
+        glm_vec3_scale(graphics_get_active_camera().right, 10 * delta, right);
+        if (input_axis[1] >= 1) {
+            glm_vec3_add(player.pos, forward, player.pos);
+        } else if (input_axis[1] <= -1) {
+            glm_vec3_sub(player.pos, forward, player.pos);
+        } else if (input_axis[0] <= -1) {
+            glm_vec3_sub(player.pos, right, player.pos);
+        } else if (input_axis[0] >= 1) {
+            glm_vec3_add(player.pos, right, player.pos);
+        }
+        //glm_vec3_add(player.pos, graphics_get_active_camera().right, player.pos);
+        graphics_begin();
         mat4 parent = GLM_MAT4_IDENTITY_INIT;
         glm_rotate(parent, 4, (vec3){1, 0, 0});
+        graphics_set_camera(player.pos, (vec3){0.0f, 1.0f, 0.0f}, player.yaw, player.pitch);
+        graphics_camera_perspective();
         draw_mesh(mesh, parent, (vec3){0, 0, 0}, (vec3){1, 1, 1}, (vec3){0, 1, 0}, angle);
-        //draw_mesh(mesh, parent,(vec3){0, 2, -0}, (vec3){1, 1, 1},(vec3){1, 0, 0},90);
-        angle += 1.0 * speed;
 
-        graphics_draw_end();
+        graphics_end();
+        old_time = current_time;
     }
 
     graphics_destroy();

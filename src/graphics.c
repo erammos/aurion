@@ -1,6 +1,6 @@
 #include "graphics.h"
 #include <SDL2/SDL.h>
-#include <common.h>
+#include <assets.h>
 #include <glad/glad.h>
 #include "cglm/cam.h"
 #include "cglm/vec3.h"
@@ -30,6 +30,7 @@ static void* g_context = {};
 static int screen_width = {};
 static int screen_height = {};
 static g_shader active_shader;
+static g_camera active_camera;
 
 double
 degrees(double radians) {
@@ -242,7 +243,7 @@ graphics_draw_mesh(g_mesh* mesh) {
 }
 
 void
-graphics_draw_begin() {
+graphics_begin() {
     glClearColor(1, 0, 0, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glEnable(GL_DEPTH_TEST);
@@ -256,32 +257,48 @@ graphics_use_shader(g_shader* shader) {
 }
 
 void
-graphics_draw_end() {
+graphics_end() {
     SDL_GL_SwapWindow(g_window);
 }
 
 void
 graphics_set_camera(vec3 pos, vec3 up, float yaw, float pitch) {
-    vec3 front, right, _up, target;
-    mat4 projection, view;
-    front[0] = cos(radians(yaw)) * cos(radians(pitch));
-    front[1] = sin(radians(pitch));
-    front[2] = sin(radians(yaw)) * cos(radians(pitch));
+    mat4 view;
+    active_camera.front[0] = cos(radians(yaw)) * cos(radians(pitch));
+    active_camera.front[1] = sin(radians(pitch));
+    active_camera.front[2] = sin(radians(yaw)) * cos(radians(pitch));
 
-    glm_normalize(front);
-    glm_cross(front, up, right);
-    glm_normalize(right);
-    glm_cross(right, front, _up);
-    glm_normalize(_up);
+    glm_vec3_copy(pos, active_camera.position);
+    glm_normalize(active_camera.front);
+    glm_cross(active_camera.front, up, active_camera.right);
+    glm_normalize(active_camera.right);
+    glm_cross(active_camera.right, active_camera.front, active_camera.up);
+    glm_normalize(active_camera.up);
 
-    glm_perspective(radians(45), screen_width / (float)screen_height, 0.1f, 100.0f, projection);
-    // glm_ortho(-2, 2, -2, 2, 0.1f, 100.0f, projection);
+    glm_vec3_add(active_camera.position, active_camera.front, active_camera.target);
+    glm_lookat(active_camera.position, active_camera.target, active_camera.up, view);
 
-    glm_vec3_add(pos, front, target);
-    glm_lookat(pos, target, _up, view);
-
-    GL_CHECK(glUniformMatrix4fv(glGetUniformLocation(active_shader.id, "projection"), 1, GL_FALSE, &projection[0][0]));
     GL_CHECK(glUniformMatrix4fv(glGetUniformLocation(active_shader.id, "view"), 1, GL_FALSE, &view[0][0]));
+}
+
+g_camera
+graphics_get_active_camera() {
+    return active_camera;
+}
+
+void
+graphics_camera_perspective() {
+    mat4 projection;
+    glm_perspective(radians(45), screen_width / (float)screen_height, 0.1f, 100.0f, projection);
+    GL_CHECK(glUniformMatrix4fv(glGetUniformLocation(active_shader.id, "projection"), 1, GL_FALSE, &projection[0][0]));
+}
+
+void
+graphics_camera_ortho() {
+    mat4 orthographic;
+    glm_ortho(-1, 1, -1, 1, 0.1f, 100.0f, orthographic);
+    GL_CHECK(
+        glUniformMatrix4fv(glGetUniformLocation(active_shader.id, "projection"), 1, GL_FALSE, &orthographic[0][0]));
 }
 
 g_texture

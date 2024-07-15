@@ -6,14 +6,17 @@ project(
 )
 sdl_dep = dependency('SDL2')
 cglm_dep = dependency('cglm')
+freetype_dep = dependency('freetype')
 
 unity_subproject = subproject('Unity')
 unity_dependency = unity_subproject.get_variable('unity_dep')
 unity_gen_runner = unity_subproject.get_variable('gen_test_runner')
+
 src = files(
   'src' / 'main.c',
   'src' / 'glad.c',
   'src' / 'graphics.c',
+  'src' / 'assets.c'
 )
 assets_src = 'assets'       # Path to your assets folder
 build_assets_dir = 'build/assets'  # Destination path in the build directory
@@ -31,7 +34,7 @@ inc = include_directories('include')
 executable(
   'aurion',
   src,
-  dependencies: [sdl_dep,cglm_dep],
+  dependencies: [sdl_dep,cglm_dep,freetype_dep],
   include_directories: inc,
   install: true,
 )

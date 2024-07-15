@@ -1,7 +1,7 @@
-#pragma once
+#include "assets.h"
 #include <stdio.h>
-#include <stdlib.h>
-
+#include "freetype/freetype.h"
+ FT_Library ft;
 char*
 read_file(const char* filename, size_t* size) {
     FILE* file = fopen(filename, "r+"); // Open file in binary mode
@@ -36,4 +36,17 @@ read_file(const char* filename, size_t* size) {
 
     fclose(file); // Close the file
     return buffer;
+}
+void assets_init()
+{
+    if (FT_Init_FreeType(&ft))
+    {
+        fprintf(stderr,"ERROR::FREETYPE: Could not init FreeType Library");
+        exit(1);
+    }
+
+}
+
+void assets_load_font(const char* font)
+{
 }
