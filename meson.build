@@ -38,3 +38,5 @@ executable(
   include_directories: inc,
   install: true,
 )
+
+executable('text-atlas', 'src' / 'text_app.c',dependencies: [freetype_dep])

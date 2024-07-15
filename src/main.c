@@ -141,11 +141,12 @@ main(void) {
         glm_vec3_scale(graphics_get_active_camera().right, 10 * delta, right);
         if (input_axis[1] >= 1) {
             glm_vec3_add(player.pos, forward, player.pos);
-        } else if (input_axis[1] <= -1) {
+        } 
+        if (input_axis[1] <= -1) {
             glm_vec3_sub(player.pos, forward, player.pos);
-        } else if (input_axis[0] <= -1) {
+        } if (input_axis[0] <= -1) {
             glm_vec3_sub(player.pos, right, player.pos);
-        } else if (input_axis[0] >= 1) {
+        } if (input_axis[0] >= 1) {
             glm_vec3_add(player.pos, right, player.pos);
         }
         //glm_vec3_add(player.pos, graphics_get_active_camera().right, player.pos);

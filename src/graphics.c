@@ -4,10 +4,7 @@
 #include <glad/glad.h>
 #include "cglm/cam.h"
 #include "cglm/vec3.h"
-
-#define STB_IMAGE_IMPLEMENTATION
-
-#include "stb_image.h"
+#include "assets.h"
 #define DEBUG
 
 void
@@ -304,8 +301,6 @@ graphics_camera_ortho() {
 g_texture
 graphics_load_texture(const char* path) {
     int width, height;
-    int nrchannels;
-    stbi_set_flip_vertically_on_load(true);
     unsigned int texture;
     glGenTextures(1, &texture);
     glBindTexture(GL_TEXTURE_2D, texture);
@@ -314,7 +309,7 @@ graphics_load_texture(const char* path) {
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    unsigned char* data = stbi_load(path, &width, &height, &nrchannels, 0);
+    unsigned char * data = assets_load_image(path,&width,&height);
     if (data) {
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
         // glGenerateMipmap(GL_TEXTURE_2D);
@@ -323,6 +318,6 @@ graphics_load_texture(const char* path) {
         printf(stderr, "Failed to load image");
         exit(1);
     }
-    stbi_image_free(data);
+    assets_free_image(data);
     return (g_texture){.id = texture, .type = "texture_diffuse"};
 }
