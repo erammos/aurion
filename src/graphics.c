@@ -2,9 +2,9 @@
 #include <SDL2/SDL.h>
 #include <assets.h>
 #include <glad/glad.h>
+#include "assets.h"
 #include "cglm/cam.h"
 #include "cglm/vec3.h"
-#include "assets.h"
 #define DEBUG
 
 void
@@ -29,6 +29,14 @@ static int screen_height = {};
 static g_shader active_shader;
 static g_camera active_camera;
 
+int graphics_get_width()
+{
+    return screen_width;
+}
+int graphics_get_height()
+{
+    return screen_height;
+}
 double
 degrees(double radians) {
     return radians * (180.0 / M_PI);
@@ -98,7 +106,8 @@ graphics_init(void* window) {
         return 1;
     }
     SDL_GL_MakeCurrent(window, g_context);
-    SDL_GL_GetDrawableSize(window, &screen_width, &screen_height);
+    SDL_GetWindowSize(window, &screen_width, &screen_height);
+
     if (!gladLoadGLLoader((GLADloadproc)SDL_GL_GetProcAddress)) {
         fprintf(stderr, "Failed to initialize GLAD");
         return -1;
@@ -239,12 +248,16 @@ graphics_draw_mesh(g_mesh* mesh) {
     GL_CHECK(glBindVertexArray(0));
 }
 
+
 void
 graphics_begin() {
+    SDL_GetWindowSize(g_window, &screen_width, &screen_height);
+    glViewport(0, 0, screen_width, screen_height);
     glClearColor(1, 0, 0, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glEnable(GL_DEPTH_TEST);
     glDisable(GL_CULL_FACE);
+    graphics_use_shader(&active_shader);
 }
 
 void
@@ -309,13 +322,13 @@ graphics_load_texture(const char* path) {
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    unsigned char * data = assets_load_image(path,&width,&height);
+    unsigned char* data = assets_load_image(path, &width, &height);
     if (data) {
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
         // glGenerateMipmap(GL_TEXTURE_2D);
     } else {
         /* code here */
-        printf(stderr, "Failed to load image");
+        fprintf(stderr, "Failed to load image");
         exit(1);
     }
     assets_free_image(data);

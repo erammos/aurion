@@ -1,9 +1,10 @@
 #include <SDL2/SDL.h>
 #include <graphics.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include "cglm/affine-pre.h"
 #include "cglm/mat4.h"
-
+#include "gui.h"
 #define WIDTH  800
 #define HEIGHT 600
 
@@ -29,8 +30,12 @@ int
 main(void) {
     SDL_Init(SDL_INIT_EVERYTHING);
     auto window = SDL_CreateWindow("my test window", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, WIDTH, HEIGHT,
-                                   SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN);
+                                   SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN | SDL_WINDOW_FULLSCREEN_DESKTOP);
+
+
     graphics_init(window);
+    gui_init(window);
+
     g_shader shader;
     graphics_load_shaders(&shader, "assets/shader.vert", "assets/shader.frag");
     g_texture texture = graphics_load_texture("assets/marble2.jpg");
@@ -95,6 +100,8 @@ main(void) {
     while (running) {
         current_time = SDL_GetTicks();
         float delta = (float)(current_time - old_time) / 1000.0f;
+        gui_input_begin();
+
         while (SDL_PollEvent(&event)) {
             if (event.type == SDL_QUIT) {
                 running = false;
@@ -123,13 +130,16 @@ main(void) {
             }
             if (event.type == SDL_MOUSEMOTION) {
 
+               
                 // Update camera view angles
                 mouse_pos[0] = event.motion.xrel;
                 // Y Coordinates are in screen space so don't get negated
                 mouse_pos[1] = event.motion.yrel;
             }
+            gui_input(event);
         }
 
+        gui_input_end();
         player.yaw += 0.5f * mouse_pos[0];
         player.pitch -= 0.5f * mouse_pos[1];
         mouse_pos[0] = 0;
@@ -141,12 +151,14 @@ main(void) {
         glm_vec3_scale(graphics_get_active_camera().right, 10 * delta, right);
         if (input_axis[1] >= 1) {
             glm_vec3_add(player.pos, forward, player.pos);
-        } 
+        }
         if (input_axis[1] <= -1) {
             glm_vec3_sub(player.pos, forward, player.pos);
-        } if (input_axis[0] <= -1) {
+        }
+        if (input_axis[0] <= -1) {
             glm_vec3_sub(player.pos, right, player.pos);
-        } if (input_axis[0] >= 1) {
+        }
+        if (input_axis[0] >= 1) {
             glm_vec3_add(player.pos, right, player.pos);
         }
         //glm_vec3_add(player.pos, graphics_get_active_camera().right, player.pos);
@@ -156,7 +168,12 @@ main(void) {
         graphics_set_camera(player.pos, (vec3){0.0f, 1.0f, 0.0f}, player.yaw, player.pitch);
         graphics_camera_perspective();
         draw_mesh(mesh, parent, (vec3){0, 0, 0}, (vec3){1, 1, 1}, (vec3){0, 1, 0}, angle);
-
+        gui_begin();
+        char output[25];
+        sprintf(output, "%f",player.pitch);
+        gui_draw_text(10,0,output);
+        gui_draw_text(graphics_get_width() / 2,graphics_get_height() / 2,"+");
+        gui_end();
         graphics_end();
         old_time = current_time;
     }

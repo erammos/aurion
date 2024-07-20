@@ -16,7 +16,8 @@ src = files(
   'src' / 'main.c',
   'src' / 'glad.c',
   'src' / 'graphics.c',
-  'src' / 'assets.c'
+  'src' / 'assets.c',
+      'src' / 'gui.c'
 )
 assets_src = 'assets'       # Path to your assets folder
 build_assets_dir = 'build/assets'  # Destination path in the build directory
@@ -39,4 +40,3 @@ executable(
   install: true,
 )
 
-executable('text-atlas', 'src' / 'text_app.c',dependencies: [freetype_dep])

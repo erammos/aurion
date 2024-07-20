@@ -56,3 +56,5 @@ void graphics_set_transform(mat4 transform);
 g_camera graphics_get_active_camera();
 void graphics_camera_perspective();
 void graphics_camera_ortho();
+int graphics_get_width();
+int graphics_get_height();
