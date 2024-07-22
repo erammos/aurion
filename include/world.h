@@ -19,7 +19,8 @@ ECS_TAG_DECLARE(World);
 void create_world();
 g_entity world_create_entity(const char * name, vec3 pos, vec3 scale,float angle, vec3 axis, ecs_entity_t parent);
 void word_add_entity(g_entity);
-void world_update();
+void world_update(float dt);
+void world_destroy();
 
 
 

@@ -19,6 +19,11 @@ draw_mesh(g_mesh mesh, mat4 parent, vec3 translate, vec3 scale, vec3 rotate, flo
     graphics_set_transform(out);
     graphics_draw_mesh(&mesh);
 }
+static void
+draw_mesh_transform(g_mesh mesh, mat4 model) {
+    graphics_set_transform(model);
+    graphics_draw_mesh(&mesh);
+}
 
 typedef struct {
     vec3 pos;
@@ -31,6 +36,7 @@ main(void) {
     SDL_Init(SDL_INIT_EVERYTHING);
     auto window = SDL_CreateWindow("my test window", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, WIDTH, HEIGHT,
                                    SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN | SDL_WINDOW_FULLSCREEN_DESKTOP);
+                                   SDL_ShowCursor(false);
 
     graphics_init(window);
     gui_init(window);
@@ -162,15 +168,18 @@ main(void) {
         //glm_vec3_add(player.pos, graphics_get_active_camera().right, player.pos);
         graphics_begin();
         mat4 parent = GLM_MAT4_IDENTITY_INIT;
-        glm_rotate(parent, 4, (vec3){1, 0, 0});
+
+        glm_rotate(parent, radians(0), (vec3){0, 1, 0});
         graphics_set_camera(player.pos, (vec3){0.0f, 1.0f, 0.0f}, player.yaw, player.pitch);
         graphics_camera_perspective();
         draw_mesh(mesh, parent, (vec3){0, 0, 0}, (vec3){1, 1, 1}, (vec3){0, 1, 0}, angle);
+
+        angle += 0.02f;
         gui_begin();
         char output[25];
-        sprintf(output, "%f", player.pitch);
+        sprintf(output, "%f", angle);
         gui_draw_text(10, 0, output);
-        gui_draw_text(graphics_get_width() / 2, graphics_get_height() / 2, "+");
+        gui_draw_text(graphics_get_width() / 2, graphics_get_height() / 2, output);
         gui_end();
         graphics_end();
         old_time = current_time;

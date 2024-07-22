@@ -25,14 +25,17 @@ test_teardown(void) {
 }
 
 MU_TEST(test_check) {
+
     ecs_world_t* ecs = ecs_init();
     ECS_COMPONENT_DEFINE(ecs, Transform);
 	ECS_TAG(ecs,World);
 	ECS_TAG(ecs,Local);
 	ecs_entity_t hero = ecs_entity(ecs, { .name = "Hero" });
 	ecs_entity_t weapon = ecs_entity(ecs, { .name = "Weapon" });
+
 	ecs_set_pair(ecs,hero,Transform, World, {GLM_MAT4_IDENTITY_INIT});
 	ecs_set_pair(ecs,hero,Transform, Local, {GLM_MAT4_IDENTITY_INIT});
+    
 	ecs_set_pair(ecs,weapon,Transform, World, {GLM_MAT4_IDENTITY_INIT});
 	ecs_set_pair(ecs,weapon,Transform, Local, {GLM_MAT4_IDENTITY_INIT});
 
