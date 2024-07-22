@@ -29,14 +29,16 @@ static int screen_height = {};
 static g_shader active_shader;
 static g_camera active_camera;
 
-int graphics_get_width()
-{
+int
+graphics_get_width() {
     return screen_width;
 }
-int graphics_get_height()
-{
+
+int
+graphics_get_height() {
     return screen_height;
 }
+
 double
 degrees(double radians) {
     return radians * (180.0 / M_PI);
@@ -247,7 +249,6 @@ graphics_draw_mesh(g_mesh* mesh) {
     GL_CHECK(glDrawElements(GL_TRIANGLES, mesh->num_i, GL_UNSIGNED_INT, 0));
     GL_CHECK(glBindVertexArray(0));
 }
-
 
 void
 graphics_begin() {

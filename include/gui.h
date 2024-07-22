@@ -1,5 +1,4 @@
-#ifndef GUI_H_
-#define GUI_H_
+#pragma once
 #include <SDL2/SDL.h>
 
 void gui_init(SDL_Window* win);
@@ -9,4 +8,3 @@ void gui_input_end();
 void gui_input(SDL_Event event);
 void gui_begin();
 void gui_end();
-#endif

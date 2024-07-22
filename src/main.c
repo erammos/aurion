@@ -32,7 +32,6 @@ main(void) {
     auto window = SDL_CreateWindow("my test window", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, WIDTH, HEIGHT,
                                    SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN | SDL_WINDOW_FULLSCREEN_DESKTOP);
 
-
     graphics_init(window);
     gui_init(window);
 
@@ -130,7 +129,6 @@ main(void) {
             }
             if (event.type == SDL_MOUSEMOTION) {
 
-               
                 // Update camera view angles
                 mouse_pos[0] = event.motion.xrel;
                 // Y Coordinates are in screen space so don't get negated
@@ -170,9 +168,9 @@ main(void) {
         draw_mesh(mesh, parent, (vec3){0, 0, 0}, (vec3){1, 1, 1}, (vec3){0, 1, 0}, angle);
         gui_begin();
         char output[25];
-        sprintf(output, "%f",player.pitch);
-        gui_draw_text(10,0,output);
-        gui_draw_text(graphics_get_width() / 2,graphics_get_height() / 2,"+");
+        sprintf(output, "%f", player.pitch);
+        gui_draw_text(10, 0, output);
+        gui_draw_text(graphics_get_width() / 2, graphics_get_height() / 2, "+");
         gui_end();
         graphics_end();
         old_time = current_time;

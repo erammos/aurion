@@ -1,0 +1,5 @@
+[wrap-git]
+directory=flecs
+url=https://github.com/SanderMertens/flecs
+revision=v4.0.0
+depth=1

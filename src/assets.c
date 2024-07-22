@@ -1,9 +1,7 @@
 #include "assets.h"
 #include <stdio.h>
-#include "freetype/freetype.h"
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
-FT_Library ft;
 
 char*
 read_file(const char* filename, size_t* size) {
@@ -40,19 +38,6 @@ read_file(const char* filename, size_t* size) {
     fclose(file); // Close the file
     return buffer;
 }
-
-void
-assets_init() {
-    if (FT_Init_FreeType(&ft)) {
-        fprintf(stderr, "ERROR::FREETYPE: Could not init FreeType Library");
-        exit(1);
-    }
-
-    stbi_set_flip_vertically_on_load(true);
-}
-
-void
-assets_load_font(const char* font) {}
 
 unsigned char*
 assets_load_image(const char* path, int* width, int* height) {

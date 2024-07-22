@@ -5,8 +5,8 @@ project(
   default_options: ['warning_level=3', 'c_std=c23'],
 )
 sdl_dep = dependency('SDL2')
+flecs_dep = dependency('flecs')
 cglm_dep = dependency('cglm')
-freetype_dep = dependency('freetype')
 
 unity_subproject = subproject('Unity')
 unity_dependency = unity_subproject.get_variable('unity_dep')
@@ -17,7 +17,8 @@ src = files(
   'src' / 'glad.c',
   'src' / 'graphics.c',
   'src' / 'assets.c',
-      'src' / 'gui.c'
+      'src' / 'gui.c',
+      'src' / 'world.c'
 )
 assets_src = 'assets'       # Path to your assets folder
 build_assets_dir = 'build/assets'  # Destination path in the build directory
@@ -35,8 +36,10 @@ inc = include_directories('include')
 executable(
   'aurion',
   src,
-  dependencies: [sdl_dep,cglm_dep,freetype_dep],
+  dependencies: [sdl_dep,cglm_dep,flecs_dep],
   include_directories: inc,
   install: true,
 )
+e = executable('run_test', 'src' / 'test_ecs.c', include_directories: inc, dependencies: [flecs_dep,cglm_dep])
+test('test', e)
 
