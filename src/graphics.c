@@ -254,7 +254,7 @@ void
 graphics_begin() {
     SDL_GetWindowSize(g_window, &screen_width, &screen_height);
     glViewport(0, 0, screen_width, screen_height);
-    glClearColor(1, 0, 0, 1.0f);
+    glClearColor(0, 0, 0, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glEnable(GL_DEPTH_TEST);
     glDisable(GL_CULL_FACE);

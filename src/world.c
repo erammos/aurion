@@ -14,17 +14,21 @@ ecs_entity_t world;
 void
 update_transform(ecs_iter_t* it) {
     // Print delta_time. The same value is passed to all systems.
-    g_transform* p = ecs_field(it, g_transform, 0);
-    g_transform* p_out = ecs_field(it, g_transform, 1);
-    g_transform* p_parent = ecs_field(it, g_transform, 2);
+    g_transform* local = ecs_field(it, g_transform, 0);
+    g_transform* world = ecs_field(it, g_transform, 1);
+    g_transform* parent_world = ecs_field(it, g_transform, 2);
 
     // Inner loop, iterates entities in archetype
     for (int i = 0; i < it->count; i++) {
-        glm_mat4_copy(p->matrix, p_out->matrix);
-        if (p_parent) {
-            glm_mat4_mul(p_parent->matrix, p_out->matrix, p_out->matrix);
+        glm_mat4_copy(local[i].matrix, world[i].matrix);
+        if (parent_world) {
+            glm_mat4_mul(parent_world[i].matrix, world[i].matrix, world[i].matrix);
         }
+    //     auto name = ecs_get_name(ecs, it->entities[i]);
+    //    printf("%s:\n", name);
+    //    glm_mat4_print(world[i].matrix,stdout);
     }
+
 }
 
 void
@@ -73,7 +77,7 @@ world_transform_entity(g_entity e, vec3 pos, vec3 scale, float angle, vec3 axis)
 g_entity
 world_create_entity(const char* name, vec3 pos, vec3 scale, float angle, vec3 axis, ecs_entity_t parent) {
 
-    ecs_entity_t e = ecs_entity(ecs, {.name = name});
+   ecs_entity_t e = ecs_entity(ecs, {.name = name});
     ecs_set_pair(ecs, e, g_transform, World, {GLM_MAT4_IDENTITY_INIT});
     ecs_set_pair(ecs, e, g_transform, Local, {GLM_MAT4_IDENTITY_INIT});
     ecs_add_pair(ecs, e, EcsChildOf, parent);
@@ -83,7 +87,12 @@ world_create_entity(const char* name, vec3 pos, vec3 scale, float angle, vec3 ax
 }
 
 void
-world_get_transform(g_entity e, mat4 **out) {
+world_get_local_transform(g_entity e, mat4 **out) {
+    auto p = ecs_get_mut_pair(ecs, e.entity, g_transform, Local);
+    *out = &p->matrix;
+}
+void
+world_get_world_transform(g_entity e, mat4 **out) {
     auto p = ecs_get_mut_pair(ecs, e.entity, g_transform, World);
     *out = &p->matrix;
 }

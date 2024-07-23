@@ -2,10 +2,11 @@
 #include <graphics.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <sys/_types/_mode_t.h>
+#include <world.h>
 #include "cglm/affine-pre.h"
 #include "cglm/mat4.h"
 #include "gui.h"
-#include <world.h>
 #define WIDTH  800
 #define HEIGHT 600
 
@@ -20,6 +21,7 @@ draw_mesh(g_mesh mesh, mat4 parent, vec3 translate, vec3 scale, vec3 rotate, flo
     graphics_set_transform(out);
     graphics_draw_mesh(&mesh);
 }
+
 static void
 draw_mesh_transform(g_mesh mesh, mat4 model) {
     graphics_set_transform(model);
@@ -32,12 +34,13 @@ typedef struct {
     float pitch;
 } player_t;
 
+#define MAX_CUBES 1000
 int
 main(void) {
     SDL_Init(SDL_INIT_EVERYTHING);
     auto window = SDL_CreateWindow("my test window", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, WIDTH, HEIGHT,
-                                   SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN | SDL_WINDOW_FULLSCREEN_DESKTOP);
-                                   SDL_ShowCursor(false);
+                                   SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN| SDL_WINDOW_FULLSCREEN_DESKTOP);
+    SDL_ShowCursor(false);
 
     graphics_init(window);
     gui_init(window);
@@ -95,18 +98,33 @@ main(void) {
     auto mesh = graphics_create_mesh(24, 36, 1, boxVertices, boxIndices, textures);
     SDL_Event event;
     create_world();
-     g_entity cube = world_create_entity("cube", (vec3){0,0,-10}, (vec3){1,1,1}, 0, (vec3){0,1,0}, world);
-     g_entity cube2 = world_create_entity("cube2", (vec3){0,0,[2] = 4}, (vec3){1,1,1}, 0, (vec3){0,1,0}, cube.entity);
-    
+    g_entity cubes[MAX_CUBES] = {};
+    cubes[0] = world_create_entity("cube", (vec3){0, 0, -10}, (vec3){1, 1, 1}, 0, (vec3){0, 1, 0}, world);
+    for (int i = 1; i < MAX_CUBES; i++) {
+        char name[100] = {"cube"};
+
+        char num [100] = {0}; 
+        SDL_itoa(i, num, 10);
+       // name[4] = i + '0';
+       strcat(name,num);
+        cubes[i] = world_create_entity(name, (vec3){-40 + (rand() % 40), -40 + (rand() % 40),  -40 + (rand() % 40)}, (vec3){1, 1, 1}, 0, (vec3){0, 1, 0},
+                                       cubes[0].entity);
+    }
+
     graphics_use_shader(&shader);
     float speed = 0.05f;
     float angle = 0;
     bool running = true;
     unsigned int old_time, current_time;
+    Uint32 start_time = SDL_GetTicks();
+
     current_time = SDL_GetTicks();
     vec2 input_axis = {};
     player_t player = (player_t){.yaw = -90.0f, .pitch = 0, .pos[2] = 10};
-    vec2 mouse_pos;
+    int mouse_pos[2] = {0};
+    graphics_camera_perspective();
+    int frame_count = 0;
+    char fps[10] = {0};
     while (running) {
         current_time = SDL_GetTicks();
         float delta = (float)(current_time - old_time) / 1000.0f;
@@ -151,13 +169,14 @@ main(void) {
         gui_input_end();
         player.yaw += 0.5f * mouse_pos[0];
         player.pitch -= 0.5f * mouse_pos[1];
+
         mouse_pos[0] = 0;
         mouse_pos[1] = 0;
 
         vec3 forward;
         vec3 right;
-        glm_vec3_scale(graphics_get_active_camera().front, 10 * delta, forward);
-        glm_vec3_scale(graphics_get_active_camera().right, 10 * delta, right);
+        glm_vec3_scale(graphics_get_active_camera().front, 100* delta, forward);
+        glm_vec3_scale(graphics_get_active_camera().right, 100 * delta, right);
         if (input_axis[1] >= 1) {
             glm_vec3_add(player.pos, forward, player.pos);
         }
@@ -170,28 +189,38 @@ main(void) {
         if (input_axis[0] >= 1) {
             glm_vec3_add(player.pos, right, player.pos);
         }
-        //glm_vec3_add(player.pos, graphics_get_active_camera().right, player.pos);
-        graphics_begin();
 
-        graphics_set_camera(player.pos, (vec3){0.0f, 1.0f, 0.0f}, player.yaw, player.pitch);
-        graphics_camera_perspective();
-        mat4 * model;
-        world_get_transform(cube, &model);
-        glm_rotate(*model, radians(angle), (vec3){0,1,0});
-        mat4 * model2;
-        world_get_transform(cube2, &model2);
+        mat4* first_cube;
+
+        world_get_local_transform(cubes[0], &first_cube);
+        glm_mat4_identity(*first_cube);
+        glm_rotate(*first_cube, radians(angle), (vec3){0, 1, 0});
         world_update(delta);
-        draw_mesh_transform(mesh, *model);
-        draw_mesh_transform(mesh, *model2);
+        graphics_begin();
+        graphics_set_camera(player.pos, (vec3){0.0f, 1.0f, 0.0f}, player.yaw, player.pitch);
 
-        angle += 0.02f;
-        // gui_begin();
-        // // char output[25];
-        // // sprintf(output, "%f", angle);
-        // // gui_draw_text(10, 0, output);
-        // gui_draw_text(graphics_get_width() / 2, graphics_get_height() / 2, "+");
-        // gui_end();
+        for (int i = 0; i < MAX_CUBES; i++) {
+
+            mat4* model;
+            world_get_world_transform(cubes[i], &model);
+            draw_mesh_transform(mesh, *model);
+        }
+
+        angle += 0.01f;
+        gui_begin();
+       
+        gui_draw_text(graphics_get_width() / 2, graphics_get_height() / 2, "+");
+        gui_draw_text(10, 10, fps);
+         Uint32 current_time = SDL_GetTicks();
+        if (current_time - start_time >= 1000) {
+            sprintf(fps, "%d", frame_count);
+            frame_count = 0;
+            start_time = current_time;
+        }
+        gui_end();
         graphics_end();
+        frame_count++;
+       
         old_time = current_time;
     }
 
