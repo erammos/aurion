@@ -1,4 +1,5 @@
-#pragma once
+#ifndef _GRAPHICS_H
+#define _GRAPHICS_H
 #include <cglm/cglm.h>
 #ifndef M_PI
 #define M_PI (3.14159265358979323846)
@@ -58,3 +59,4 @@ void graphics_camera_perspective();
 void graphics_camera_ortho();
 int graphics_get_width();
 int graphics_get_height();
+#endif

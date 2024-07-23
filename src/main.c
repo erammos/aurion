@@ -5,6 +5,7 @@
 #include "cglm/affine-pre.h"
 #include "cglm/mat4.h"
 #include "gui.h"
+#include <world.h>
 #define WIDTH  800
 #define HEIGHT 600
 
@@ -93,6 +94,10 @@ main(void) {
     g_texture textures[1] = {texture};
     auto mesh = graphics_create_mesh(24, 36, 1, boxVertices, boxIndices, textures);
     SDL_Event event;
+    create_world();
+     g_entity cube = world_create_entity("cube", (vec3){0,0,-10}, (vec3){1,1,1}, 0, (vec3){0,1,0}, world);
+     g_entity cube2 = world_create_entity("cube2", (vec3){0,0,[2] = 4}, (vec3){1,1,1}, 0, (vec3){0,1,0}, cube.entity);
+    
     graphics_use_shader(&shader);
     float speed = 0.05f;
     float angle = 0;
@@ -167,20 +172,25 @@ main(void) {
         }
         //glm_vec3_add(player.pos, graphics_get_active_camera().right, player.pos);
         graphics_begin();
-        mat4 parent = GLM_MAT4_IDENTITY_INIT;
 
-        glm_rotate(parent, radians(0), (vec3){0, 1, 0});
         graphics_set_camera(player.pos, (vec3){0.0f, 1.0f, 0.0f}, player.yaw, player.pitch);
         graphics_camera_perspective();
-        draw_mesh(mesh, parent, (vec3){0, 0, 0}, (vec3){1, 1, 1}, (vec3){0, 1, 0}, angle);
+        mat4 * model;
+        world_get_transform(cube, &model);
+        glm_rotate(*model, radians(angle), (vec3){0,1,0});
+        mat4 * model2;
+        world_get_transform(cube2, &model2);
+        world_update(delta);
+        draw_mesh_transform(mesh, *model);
+        draw_mesh_transform(mesh, *model2);
 
         angle += 0.02f;
-        gui_begin();
-        char output[25];
-        sprintf(output, "%f", angle);
-        gui_draw_text(10, 0, output);
-        gui_draw_text(graphics_get_width() / 2, graphics_get_height() / 2, output);
-        gui_end();
+        // gui_begin();
+        // // char output[25];
+        // // sprintf(output, "%f", angle);
+        // // gui_draw_text(10, 0, output);
+        // gui_draw_text(graphics_get_width() / 2, graphics_get_height() / 2, "+");
+        // gui_end();
         graphics_end();
         old_time = current_time;
     }

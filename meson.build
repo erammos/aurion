@@ -13,7 +13,6 @@ unity_dependency = unity_subproject.get_variable('unity_dep')
 unity_gen_runner = unity_subproject.get_variable('gen_test_runner')
 
 src = files(
-  'src' / 'main.c',
   'src' / 'glad.c',
   'src' / 'graphics.c',
   'src' / 'assets.c',
@@ -35,10 +34,10 @@ inc = include_directories('include')
 
 executable(
   'aurion',
-  src,
+  [src, 'src' / 'main.c'],
   dependencies: [sdl_dep,cglm_dep,flecs_dep],
   include_directories: inc,
-  install: true,
+  install: false,
 )
 e = executable('run_test', 'src' / 'test_ecs.c', include_directories: inc, dependencies: [flecs_dep,cglm_dep])
 test('test', e)
