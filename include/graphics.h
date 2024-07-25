@@ -59,4 +59,5 @@ void graphics_camera_perspective();
 void graphics_camera_ortho();
 int graphics_get_width();
 int graphics_get_height();
+g_mesh graphics_load_obj(const char* path);
 #endif

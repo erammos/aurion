@@ -191,6 +191,7 @@ main(void) {
     auto mesh = graphics_create_mesh(24, 36, 1, boxVertices, boxIndices, textures);
     auto terrain_mesh = graphics_create_mesh(TERRAIN_WIDTH * TERRAIN_HEIGHT, (TERRAIN_WIDTH - 1) * (TERRAIN_HEIGHT - 1) * 6, 1, vertices,
                                              indices, textures);
+    auto mesh_obj = graphics_load_obj("assets/test.obj");
      SDL_Event event;
     create_world();
     g_entity cubes[MAX_CUBES] = {};
@@ -298,7 +299,7 @@ main(void) {
 
             mat4* model;
             world_get_world_transform(cubes[i], &model);
-            draw_mesh_transform(mesh, *model);
+            draw_mesh_transform(mesh_obj, *model);
         }
 
         mat4 model_terrain = GLM_MAT4_IDENTITY_INIT;
