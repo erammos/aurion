@@ -348,3 +348,9 @@ graphics_load_obj(const char* path) {
     graphics_create_gl_buffer(&mesh);
     return mesh;
 }
+
+void graphics_set_light(vec3 pos,vec3 viewPos) {
+    GL_CHECK(glUniform3fv(glGetUniformLocation(active_shader.id, "lightPos"),1, &pos[0]));
+    GL_CHECK(glUniform3fv(glGetUniformLocation(active_shader.id, "viewPos"), 1,&viewPos[0]));
+    //GL_CHECK(glUniform1f(glGetUniformLocation(active_shader.id, "light.intensity"), intensity));
+}

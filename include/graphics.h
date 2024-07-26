@@ -60,4 +60,5 @@ void graphics_camera_ortho();
 int graphics_get_width();
 int graphics_get_height();
 g_mesh graphics_load_obj(const char* path);
+void graphics_set_light(vec3 pos,vec3 viewPos);
 #endif

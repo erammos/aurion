@@ -75,6 +75,8 @@ main(void) {
 
     g_shader shader;
     graphics_load_shaders(&shader, "assets/shader.vert", "assets/shader.frag");
+    g_shader light_shader;
+    graphics_load_shaders(&light_shader, "assets/light.vert", "assets/light.frag");
     g_texture texture = graphics_load_texture("assets/marble2.jpg");
 
     const int TERRAIN_WIDTH = 100;
@@ -207,7 +209,7 @@ main(void) {
                                        (vec3){1, 1, 1}, 0, (vec3){0, 1, 0}, cubes[0].entity);
     }
 
-    graphics_use_shader(&shader);
+    graphics_use_shader(&light_shader);
     float speed = 0.05f;
     float angle = 0;
     bool running = true;
@@ -216,7 +218,7 @@ main(void) {
 
     current_time = SDL_GetTicks();
     vec2 input_axis = {};
-    player_t player = (player_t){.yaw = -90.0f, .pitch = 0, .pos[2] = 10};
+    player_t player = (player_t){.yaw = -90.0f, .pitch = 0, .pos[1] = 5, .pos[2] = 5};
     int mouse_pos[2] = {0};
     graphics_camera_perspective();
     int frame_count = 0;
@@ -294,7 +296,7 @@ main(void) {
         world_update(delta);
         graphics_begin();
         graphics_set_camera(player.pos, (vec3){0.0f, 1.0f, 0.0f}, player.yaw, player.pitch);
-
+        graphics_set_light((vec3) {0,2,0}, player.pos);
         for (int i = 0; i < MAX_CUBES; i++) {
 
             mat4* model;
@@ -303,6 +305,7 @@ main(void) {
         }
 
         mat4 model_terrain = GLM_MAT4_IDENTITY_INIT;
+        glm_translate(model_terrain, (vec3){-TERRAIN_WIDTH / 2, -3,  -TERRAIN_HEIGHT / 2});
         draw_mesh_transform(terrain_mesh, model_terrain);
         angle += 0.01f;
         gui_begin();
