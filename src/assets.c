@@ -56,28 +56,29 @@ assets_free_image(unsigned char* data) {
     stbi_image_free(data);
 }
 
-
-typedef struct {int p,t,n;} pair;
-typedef struct 
-{
-    pair key;
+typedef struct {
+    int p, t, n;
+} key_t;
+typedef struct {
     unsigned int index;
     g_vertex vertex;
-
+} value_t;
+typedef struct {
+    key_t key;
+    value_t value;
 } hashmap;
 
 g_mesh
 assets_load_obj(const char* path) {
     fastObjMesh* fast_mesh = fast_obj_read(path);
-
-   hashmap * hash = NULL;
+    hashmap* hash = NULL;
     g_mesh mesh;
 
-    mesh.num_v = fast_mesh->face_count * 3;
-    mesh.num_i = mesh.num_v;
+    mesh.num_v =  0;
+    mesh.num_i = 0;
     mesh.num_t = fast_mesh->texture_count - 1;
-    mesh.indices = malloc(sizeof(unsigned int) * mesh.num_i);
-    mesh.vertices = malloc(sizeof(g_vertex) * mesh.num_v);
+    mesh.indices = NULL;
+    mesh.vertices = NULL;
     mesh.textures = malloc(sizeof(g_texture) * mesh.num_t);
 
     auto p = fast_mesh->textures[1];
@@ -94,11 +95,14 @@ assets_load_obj(const char* path) {
                 g_vertex vertex;
 
                 fastObjIndex mi = fast_mesh->indices[grp->index_offset + idx];
-                pair p = {.p = mi.p , .n = mi.n,.t = mi.t};
-                if ( hmget(hash,p)  > 0)
-                continue;
-                 hmput(hash, p,idx + 1); 
-                mesh.indices[idx] = idx;
+                key_t key = {.p = mi.p, .n = mi.n, .t = mi.t};
+                auto vv = hmget(hash,key);
+                if(vv.index  > 0)
+                {
+                    arrput(mesh.indices, vv.index - 1);
+                    idx++;
+                    continue;
+                }
                 if (mi.p) {
                     vertex.position[0] = fast_mesh->positions[3 * mi.p + 0];
                     vertex.position[1] = fast_mesh->positions[3 * mi.p + 1];
@@ -113,10 +117,29 @@ assets_load_obj(const char* path) {
                     vertex.normal[1] = fast_mesh->normals[3 * mi.n + 1];
                     vertex.normal[2] = fast_mesh->normals[3 * mi.n + 2];
                 }
-                mesh.vertices[idx] = vertex;
+                arrput(mesh.indices, mesh.num_v);
+                arrput(mesh.vertices,vertex);
+                value_t value = {mesh.num_v + 1, vertex};
+                hmput(hash, key, value);
+                mesh.num_v++;
                 idx++;
             }
         }
+    }
+    mesh.num_i = arrlen(mesh.indices);
+    mesh.num_v = arrlen(mesh.vertices);
+
+
+    for(int i = 0; i < mesh.num_v; i++)
+    {
+        printf("index: %d ",i);
+        printf("%f ", mesh.vertices[i].position[0]);
+        printf("%f ", mesh.vertices[i].position[1]);
+        printf("%f\n", mesh.vertices[i].position[2]);
+    }
+    for(int i = 0; i < mesh.num_i; i++)
+    {
+        printf("%d ", mesh.indices[i]);
     }
     return mesh;
 }
