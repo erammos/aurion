@@ -85,7 +85,6 @@ assets_load_obj(const char* path) {
     g_texture texture = graphics_load_texture(p.path);
     mesh.textures[0] = texture;
 
-    int idx = 0;
     for (int gi = 0; gi < fast_mesh->group_count; gi++) {
         fastObjGroup* grp = &fast_mesh->groups[gi];
         for (int i = 0; i < grp->face_count; i++) {
@@ -94,13 +93,13 @@ assets_load_obj(const char* path) {
             for (int j = 0; j < fv; j++) {
                 g_vertex vertex;
 
-                fastObjIndex mi = fast_mesh->indices[grp->index_offset + idx];
+                fastObjIndex mi = fast_mesh->indices[grp->index_offset + mesh.num_i];
                 key_t key = {.p = mi.p, .n = mi.n, .t = mi.t};
                 auto vv = hmget(hash,key);
                 if(vv.index  > 0)
                 {
                     arrput(mesh.indices, vv.index - 1);
-                    idx++;
+                    mesh.num_i++;
                     continue;
                 }
                 if (mi.p) {
@@ -122,24 +121,9 @@ assets_load_obj(const char* path) {
                 value_t value = {mesh.num_v + 1, vertex};
                 hmput(hash, key, value);
                 mesh.num_v++;
-                idx++;
+                mesh.num_i++;
             }
         }
-    }
-    mesh.num_i = arrlen(mesh.indices);
-    mesh.num_v = arrlen(mesh.vertices);
-
-
-    for(int i = 0; i < mesh.num_v; i++)
-    {
-        printf("index: %d ",i);
-        printf("%f ", mesh.vertices[i].position[0]);
-        printf("%f ", mesh.vertices[i].position[1]);
-        printf("%f\n", mesh.vertices[i].position[2]);
-    }
-    for(int i = 0; i < mesh.num_i; i++)
-    {
-        printf("%d ", mesh.indices[i]);
     }
     return mesh;
 }
