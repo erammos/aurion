@@ -2,6 +2,11 @@
 #include <stdio.h>
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
+#define FAST_OBJ_IMPLEMENTATION
+#include <graphics.h>
+#include "fast_obj.h"
+#define STB_DS_IMPLEMENTATION
+#include "stb_ds.h"
 
 char*
 read_file(const char* filename, size_t* size) {
@@ -49,4 +54,69 @@ assets_load_image(const char* path, int* width, int* height) {
 void
 assets_free_image(unsigned char* data) {
     stbi_image_free(data);
+}
+
+
+typedef struct {int p,t,n;} pair;
+typedef struct 
+{
+    pair key;
+    unsigned int index;
+    g_vertex vertex;
+
+} hashmap;
+
+g_mesh
+assets_load_obj(const char* path) {
+    fastObjMesh* fast_mesh = fast_obj_read(path);
+
+   hashmap * hash = NULL;
+    g_mesh mesh;
+
+    mesh.num_v = fast_mesh->face_count * 3;
+    mesh.num_i = mesh.num_v;
+    mesh.num_t = fast_mesh->texture_count - 1;
+    mesh.indices = malloc(sizeof(unsigned int) * mesh.num_i);
+    mesh.vertices = malloc(sizeof(g_vertex) * mesh.num_v);
+    mesh.textures = malloc(sizeof(g_texture) * mesh.num_t);
+
+    auto p = fast_mesh->textures[1];
+    g_texture texture = graphics_load_texture(p.path);
+    mesh.textures[0] = texture;
+
+    int idx = 0;
+    for (int gi = 0; gi < fast_mesh->group_count; gi++) {
+        fastObjGroup* grp = &fast_mesh->groups[gi];
+        for (int i = 0; i < grp->face_count; i++) {
+            int fv = fast_mesh->face_vertices[grp->face_offset + i];
+
+            for (int j = 0; j < fv; j++) {
+                g_vertex vertex;
+
+                fastObjIndex mi = fast_mesh->indices[grp->index_offset + idx];
+                pair p = {.p = mi.p , .n = mi.n,.t = mi.t};
+                if ( hmget(hash,p)  > 0)
+                continue;
+                 hmput(hash, p,idx + 1); 
+                mesh.indices[idx] = idx;
+                if (mi.p) {
+                    vertex.position[0] = fast_mesh->positions[3 * mi.p + 0];
+                    vertex.position[1] = fast_mesh->positions[3 * mi.p + 1];
+                    vertex.position[2] = fast_mesh->positions[3 * mi.p + 2];
+                }
+                if (mi.t) {
+                    vertex.uv[0] = fast_mesh->texcoords[2 * mi.t + 0];
+                    vertex.uv[1] = fast_mesh->texcoords[2 * mi.t + 1];
+                }
+                if (mi.n) {
+                    vertex.normal[0] = fast_mesh->normals[3 * mi.n + 0];
+                    vertex.normal[1] = fast_mesh->normals[3 * mi.n + 1];
+                    vertex.normal[2] = fast_mesh->normals[3 * mi.n + 2];
+                }
+                mesh.vertices[idx] = vertex;
+                idx++;
+            }
+        }
+    }
+    return mesh;
 }

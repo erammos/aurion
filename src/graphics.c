@@ -5,8 +5,7 @@
 #include "assets.h"
 #include "cglm/cam.h"
 #include "cglm/vec3.h"
-#define FAST_OBJ_IMPLEMENTATION
-#include "fast_obj.h"
+
 #define DEBUG
 
 void
@@ -185,6 +184,31 @@ graphics_destroy() {
     SDL_GL_DeleteContext(g_context);
 }
 
+static void
+graphics_create_gl_buffer(g_mesh* mesh) {
+    GL_CHECK(glGenVertexArrays(1, &mesh->vao));
+    GL_CHECK(glGenBuffers(1, &mesh->vbo));
+    GL_CHECK(glGenBuffers(1, &mesh->ebo));
+
+    GL_CHECK(glBindVertexArray(mesh->vao));
+    GL_CHECK(glBindBuffer(GL_ARRAY_BUFFER, mesh->vbo));
+
+    GL_CHECK(glBufferData(GL_ARRAY_BUFFER, mesh->num_v * sizeof(g_vertex), &mesh->vertices[0], GL_STATIC_DRAW));
+
+    GL_CHECK(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mesh->ebo));
+    GL_CHECK(
+        glBufferData(GL_ELEMENT_ARRAY_BUFFER, mesh->num_i * sizeof(unsigned int), &mesh->indices[0], GL_STATIC_DRAW));
+
+    GL_CHECK(glEnableVertexAttribArray(0));
+    GL_CHECK(glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(g_vertex), (void*)0));
+    GL_CHECK(glEnableVertexAttribArray(1));
+    GL_CHECK(glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(g_vertex), (void*)offsetof(g_vertex, normal)));
+    GL_CHECK(glEnableVertexAttribArray(2));
+    GL_CHECK(glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(g_vertex), (void*)offsetof(g_vertex, uv)));
+
+    GL_CHECK(glBindVertexArray(0));
+}
+
 g_mesh
 graphics_create_mesh(size_t num_vertices, size_t num_indices, size_t num_textures,
                      g_vertex vertices[static num_vertices], unsigned int indices[static num_indices],
@@ -200,28 +224,8 @@ graphics_create_mesh(size_t num_vertices, size_t num_indices, size_t num_texture
     memcpy(mesh.vertices, vertices, sizeof(g_vertex) * num_vertices);
     memcpy(mesh.indices, indices, sizeof(unsigned int) * num_indices);
     memcpy(mesh.textures, textures, sizeof(g_texture) * num_textures);
+    graphics_create_gl_buffer(&mesh);
 
-    GL_CHECK(glGenVertexArrays(1, &mesh.vao));
-    GL_CHECK(glGenBuffers(1, &mesh.vbo));
-    GL_CHECK(glGenBuffers(1, &mesh.ebo));
-
-    GL_CHECK(glBindVertexArray(mesh.vao));
-    GL_CHECK(glBindBuffer(GL_ARRAY_BUFFER, mesh.vbo));
-
-    GL_CHECK(glBufferData(GL_ARRAY_BUFFER, mesh.num_v * sizeof(g_vertex), &mesh.vertices[0], GL_STATIC_DRAW));
-
-    GL_CHECK(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mesh.ebo));
-    GL_CHECK(
-        glBufferData(GL_ELEMENT_ARRAY_BUFFER, mesh.num_i * sizeof(unsigned int), &mesh.indices[0], GL_STATIC_DRAW));
-
-    GL_CHECK(glEnableVertexAttribArray(0));
-    GL_CHECK(glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(g_vertex), (void*)0));
-    GL_CHECK(glEnableVertexAttribArray(1));
-    GL_CHECK(glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(g_vertex), (void*)offsetof(g_vertex, normal)));
-    GL_CHECK(glEnableVertexAttribArray(2));
-    GL_CHECK(glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(g_vertex), (void*)offsetof(g_vertex, uv)));
-
-    GL_CHECK(glBindVertexArray(0));
     return mesh;
 }
 
@@ -340,71 +344,7 @@ graphics_load_texture(const char* path) {
 
 g_mesh
 graphics_load_obj(const char* path) {
-    fastObjMesh* fast_mesh = fast_obj_read(path);
-
-    g_mesh mesh;
-
-    mesh.num_v = fast_mesh->face_count * 3;
-    mesh.num_i = mesh.num_v;
-    mesh.num_t = fast_mesh->texture_count - 1;
-    mesh.indices = malloc(sizeof(unsigned int) * mesh.num_i);
-    mesh.vertices = malloc(sizeof(g_vertex) * mesh.num_v);
-    mesh.textures = malloc(sizeof(g_texture) * mesh.num_t);
-
-    auto p = fast_mesh->textures[1];
-    g_texture texture = graphics_load_texture(p.path);
-    mesh.textures[0] = texture;
-
-    int idx = 0;
-    for (int gi = 0; gi < fast_mesh->group_count; gi++) {
-        fastObjGroup* grp = &fast_mesh->groups[gi];
-        for (int i = 0; i < grp->face_count; i++) {
-            int fv = fast_mesh->face_vertices[grp->face_offset + i];
-
-            for (int j = 0; j < fv; j++) {
-                g_vertex vertex;
-                fastObjIndex mi = fast_mesh->indices[grp->index_offset + idx];
-                mesh.indices[idx] = idx;
-                printf("index: %d\n", idx);
-                if (mi.p) {
-                    vertex.position[0] = fast_mesh->positions[3 * mi.p + 0];
-                    vertex.position[1] = fast_mesh->positions[3 * mi.p + 1];
-                    vertex.position[2] = fast_mesh->positions[3 * mi.p + 2];
-                }
-                if (mi.t) {
-                    vertex.uv[0] = fast_mesh->texcoords[2 * mi.t + 0];
-                    vertex.uv[1] = fast_mesh->texcoords[2 * mi.t + 1];
-                }
-                if (mi.n) {
-                    vertex.normal[0] = fast_mesh->normals[3 * mi.n + 0];
-                    vertex.normal[1] = fast_mesh->normals[3 * mi.n + 1];
-                    vertex.normal[2] = fast_mesh->normals[3 * mi.n + 2];
-                }
-                mesh.vertices[idx] = vertex;
-                idx++;
-            }
-        }
-    }
-    GL_CHECK(glGenVertexArrays(1, &mesh.vao));
-    GL_CHECK(glGenBuffers(1, &mesh.vbo));
-    GL_CHECK(glGenBuffers(1, &mesh.ebo));
-
-    GL_CHECK(glBindVertexArray(mesh.vao));
-    GL_CHECK(glBindBuffer(GL_ARRAY_BUFFER, mesh.vbo));
-
-    GL_CHECK(glBufferData(GL_ARRAY_BUFFER, mesh.num_v * sizeof(g_vertex), &mesh.vertices[0], GL_STATIC_DRAW));
-
-    GL_CHECK(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mesh.ebo));
-    GL_CHECK(
-        glBufferData(GL_ELEMENT_ARRAY_BUFFER, mesh.num_i * sizeof(unsigned int), &mesh.indices[0], GL_STATIC_DRAW));
-
-    GL_CHECK(glEnableVertexAttribArray(0));
-    GL_CHECK(glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(g_vertex), (void*)0));
-    GL_CHECK(glEnableVertexAttribArray(1));
-    GL_CHECK(glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(g_vertex), (void*)offsetof(g_vertex, normal)));
-    GL_CHECK(glEnableVertexAttribArray(2));
-    GL_CHECK(glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(g_vertex), (void*)offsetof(g_vertex, uv)));
-
-    GL_CHECK(glBindVertexArray(0));
+    g_mesh mesh = assets_load_obj(path);
+    graphics_create_gl_buffer(&mesh);
     return mesh;
 }
