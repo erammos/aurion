@@ -34,7 +34,7 @@ inc = include_directories('include')
 
 executable(
   'aurion',
-  [src, 'src' / 'main.c'],
+  [src, 'src' / 'sandbox.c'],
   dependencies: [sdl_dep,cglm_dep,flecs_dep],
   include_directories: inc,
   install: false,
