@@ -1,3 +1,4 @@
+#pragma once
 #include "graphics.h"
 #include <SDL2/SDL.h>
 #include <assets.h>
@@ -5,6 +6,8 @@
 #include "assets.h"
 #include "cglm/cam.h"
 #include "cglm/vec3.h"
+#define STB_PERLIN_IMPLEMENTATION
+#include "stb_perlin.h"
 
 #define DEBUG
 
@@ -349,8 +352,99 @@ graphics_load_obj(const char* path) {
     return mesh;
 }
 
-void graphics_set_light(vec3 pos,vec3 viewPos) {
-    GL_CHECK(glUniform3fv(glGetUniformLocation(active_shader.id, "lightPos"),1, &pos[0]));
-    GL_CHECK(glUniform3fv(glGetUniformLocation(active_shader.id, "viewPos"), 1,&viewPos[0]));
-    //GL_CHECK(glUniform1f(glGetUniformLocation(active_shader.id, "light.intensity"), intensity));
+void
+graphics_set_light(vec3 pos, vec3 viewPos) {
+    GL_CHECK(glUniform3fv(glGetUniformLocation(active_shader.id, "lightPos"), 1, &pos[0]));
+    GL_CHECK(glUniform3fv(glGetUniformLocation(active_shader.id, "viewPos"), 1, &viewPos[0]));
+}
+
+static float
+perlin_noise(float x, float y, int octaves, float lacunarity, float persistence) {
+    float total = 0.0f;
+    float frequency = 1.0f;
+    float amplitude = 1.0f;
+    float maxValue = 0.0f; // Used for normalizing result to the range [0,1]
+
+    for (int i = 0; i < octaves; i++) {
+        total += stb_perlin_noise3(x * frequency, y * frequency, 0, 0, 0, 0) * amplitude;
+
+        maxValue += amplitude;
+
+        amplitude *= persistence;
+        frequency *= lacunarity;
+    }
+
+    return total / maxValue;
+}
+
+g_mesh
+graphics_create_terrain(int terrain_width, int terrain_height) {
+    g_texture texture = graphics_load_texture("assets/marble2.jpg");
+
+    g_vertex vertices[terrain_width * terrain_height];
+    unsigned int indices[(terrain_width - 1) * (terrain_height - 1) * 6];
+
+    float perlin_scale = 0.3f;
+    for (int y = 0; y < terrain_height; ++y) {
+        for (int x = 0; x < terrain_width; ++x) {
+            float height = perlin_noise((float)x * perlin_scale, (float)y * perlin_scale, 6, 2.0f, 0.5f);
+            if (x > 10 && x < 40 && y > 10 && y < 40) {
+                height = 0;
+            }
+
+            glm_vec3_copy((vec3){(float)x, height, (float)y}, vertices[y * terrain_width + x].position);
+            glm_vec2_copy((vec2){(float)x / terrain_width, (float)y / terrain_height},
+                          vertices[y * terrain_width + x].uv);
+        }
+    }
+
+    // Calculate normals
+    for (int y = 0; y < terrain_height; ++y) {
+        for (int x = 0; x < terrain_width; ++x) {
+            vec3 normal = {0.0f, 1.0f, 0.0f}; // default normal pointing up
+
+            // Compute normal using surrounding vertices
+            if (x > 0 && x < terrain_width - 1 && y > 0 && y < terrain_height - 1) {
+                vec3 left, right, down, up;
+                glm_vec3_copy(vertices[y * terrain_width + (x - 1)].position, left);
+                glm_vec3_copy(vertices[y * terrain_width + (x + 1)].position, right);
+                glm_vec3_copy(vertices[(y - 1) * terrain_width + x].position, down);
+                glm_vec3_copy(vertices[(y + 1) * terrain_width + x].position, up);
+
+                vec3 dx, dy;
+                glm_vec3_sub(right, left, dx);
+                glm_vec3_sub(up, down, dy);
+
+                glm_vec3_cross(dx, dy, normal);
+                glm_vec3_normalize(normal);
+            }
+
+            glm_vec3_copy(normal, vertices[y * terrain_width + x].normal);
+        }
+    }
+
+    int idx = 0;
+    for (int y = 0; y < terrain_height - 1; ++y) {
+        for (int x = 0; x < terrain_width - 1; ++x) {
+            int topLeft = y * terrain_width + x;
+            int topRight = topLeft + 1;
+            int bottomLeft = (y + 1) * terrain_width + x;
+            int bottomRight = bottomLeft + 1;
+
+            // First triangle (topLeft, bottomLeft, topRight)
+            indices[idx++] = topLeft;
+            indices[idx++] = bottomLeft;
+            indices[idx++] = topRight;
+
+            // Second triangle (topRight, bottomLeft, bottomRight)
+            indices[idx++] = topRight;
+            indices[idx++] = bottomLeft;
+            indices[idx++] = bottomRight;
+        }
+    }
+
+    g_texture textures[1] = {texture};
+    auto terrain_mesh = graphics_create_mesh(
+        terrain_width * terrain_height, (terrain_width - 1) * (terrain_height - 1) * 6, 1, vertices, indices, textures);
+    return terrain_mesh;
 }
