@@ -187,7 +187,7 @@ graphics_destroy() {
     SDL_GL_DeleteContext(g_context);
 }
 
-static void
+void
 graphics_create_gl_buffer(g_mesh* mesh) {
     GL_CHECK(glGenVertexArrays(1, &mesh->vao));
     GL_CHECK(glGenBuffers(1, &mesh->vbo));

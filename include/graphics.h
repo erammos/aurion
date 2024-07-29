@@ -62,4 +62,6 @@ int graphics_get_height();
 g_mesh graphics_load_obj(const char* path);
 void graphics_set_light(vec3 pos, vec3 viewPos);
 g_mesh graphics_create_terrain(int terrain_width, int terrain_height);
+void
+graphics_create_gl_buffer(g_mesh* mesh);
 #endif

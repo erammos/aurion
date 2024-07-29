@@ -38,7 +38,67 @@ typedef struct {
 } player_t;
 
 #define MAX_CUBES 1
+void generate_circle(vec3* circle, int segments, float radius) {
+    float angleStep = 2.0f * M_PI / segments;
+    for (int i = 0; i < segments; ++i) {
+        float angle = i * angleStep;
+        circle[i][0] = cosf(angle) * radius;
+        circle[i][1] = sinf(angle) * radius;
+        circle[i][2] = 0.0f;  // Circle lies in the XY plane
+    }
+}
 
+g_mesh generate_tunnel(int segments, int length, float radius) {
+    vec3* circle = (vec3*)malloc(segments * sizeof(vec3));
+    generate_circle(circle, segments, radius);
+
+    g_mesh mesh;
+    mesh.num_v = segments * length;
+    mesh.num_i = segments * (length - 1) * 6;
+    mesh.vertices = (g_vertex*)malloc(mesh.num_v * sizeof(g_vertex));
+    mesh.indices = (unsigned int*)malloc(mesh.num_i * sizeof(unsigned int));
+    mesh.num_t = 1;
+    mesh.textures = (g_texture*)malloc(mesh.num_t * sizeof(g_texture));
+    mesh.textures[0]= graphics_load_texture("assets/marble2.jpg");
+    int vertexCount = 0;
+    int indexCount = 0;
+
+    for (int i = 0; i < length; ++i) {
+        for (int j = 0; j < segments; ++j) {
+            vec3 position;
+            glm_vec3_copy(circle[j], position);
+            position[2] = (float)i;  // Move circle along Z axis
+
+            glm_vec3_copy(position, mesh.vertices[vertexCount].position);
+            glm_vec3_normalize_to(position, mesh.vertices[vertexCount].normal);
+            mesh.vertices[vertexCount].uv[0] = (float)j / segments;
+            mesh.vertices[vertexCount].uv[1] = (float)i / length;
+
+            if (i < length - 1) {
+                int nextSegment = (j + 1) % segments;
+                int currentIndex = i * segments + j;
+                int nextIndex = currentIndex + segments;
+                int nextSegmentIndex = i * segments + nextSegment;
+                int nextSegmentNextIndex = nextSegmentIndex + segments;
+
+                // First triangle
+                mesh.indices[indexCount++] = currentIndex;
+                mesh.indices[indexCount++] = nextIndex;
+                mesh.indices[indexCount++] = nextSegmentNextIndex;
+
+                // Second triangle
+                mesh.indices[indexCount++] = currentIndex;
+                mesh.indices[indexCount++] = nextSegmentNextIndex;
+                mesh.indices[indexCount++] = nextSegmentIndex;
+            }
+            vertexCount++;
+        }
+    }
+
+    free(circle);
+  graphics_create_gl_buffer(&mesh);
+    return mesh; 
+}
 int
 main(void) {
     SDL_Init(SDL_INIT_EVERYTHING);
@@ -67,6 +127,7 @@ main(void) {
     current_time = SDL_GetTicks();
     vec2 input_axis = {};
     player_t player = (player_t){.yaw = -90.0f, .pitch = 0, .pos[1] = 5, .pos[2] = 5};
+    g_mesh tunnel = generate_tunnel(10,1000, 10);
     int mouse_pos[2] = {0};
     graphics_camera_perspective();
     int frame_count = 0;
@@ -94,6 +155,7 @@ main(void) {
         glm_translate(model_terrain, (vec3){-100 / 2, -3, -100 / 2});
         draw_mesh_transform(mesh_terrain, model_terrain);
         draw_mesh_transform(mesh_obj, model_terrain);
+        draw_mesh_transform(tunnel, model_terrain);
         gui_begin();
 
         gui_draw_text(graphics_get_width() / 2, graphics_get_height() / 2, "+");
