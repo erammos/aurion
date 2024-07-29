@@ -8,6 +8,7 @@
 #include "cglm/mat4.h"
 #include "cglm/vec3.h"
 #include "gui.h"
+#include "input.h"
 
 #define WIDTH  800
 #define HEIGHT 600
@@ -44,6 +45,7 @@ main(void) {
     auto window = SDL_CreateWindow("my test window", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, WIDTH, HEIGHT,
                                    SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN | SDL_WINDOW_FULLSCREEN_DESKTOP);
     SDL_ShowCursor(false);
+    SDL_SetRelativeMouseMode(true);
 
     graphics_init(window);
     gui_init(window);
@@ -72,50 +74,9 @@ main(void) {
     while (running) {
         current_time = SDL_GetTicks();
         float delta = (float)(current_time - old_time) / 1000.0f;
-        gui_input_begin();
-
-        while (SDL_PollEvent(&event)) {
-            if (event.type == SDL_QUIT) {
-                running = false;
-            } else if (event.type == SDL_KEYDOWN && event.key.repeat == 0) {
-                if (event.key.keysym.sym == SDLK_ESCAPE) {
-                    running = false;
-                } else if (event.key.keysym.sym == SDLK_w) {
-                    input_axis[1] = 1.0;
-                } else if (event.key.keysym.sym == SDLK_a) {
-                    input_axis[0] = -1.0;
-                } else if (event.key.keysym.sym == SDLK_s) {
-                    input_axis[1] = -1.0;
-                } else if (event.key.keysym.sym == SDLK_d) {
-                    input_axis[0] = 1.0;
-                }
-            } else if (event.type == SDL_KEYUP) {
-                if (event.key.keysym.sym == SDLK_w) {
-                    input_axis[1] = 0.0;
-                } else if (event.key.keysym.sym == SDLK_a) {
-                    input_axis[0] = 0.0;
-                } else if (event.key.keysym.sym == SDLK_s) {
-                    input_axis[1] = 0.0;
-                } else if (event.key.keysym.sym == SDLK_d) {
-                    input_axis[0] = 0.0;
-                }
-            }
-            if (event.type == SDL_MOUSEMOTION) {
-
-                // Update camera view angles
-                mouse_pos[0] = event.motion.xrel;
-                // Y Coordinates are in screen space so don't get negated
-                mouse_pos[1] = event.motion.yrel;
-            }
-            gui_input(event);
-        }
-
-        gui_input_end();
+        running = input_update(input_axis, mouse_pos);
         player.yaw += 0.5f * mouse_pos[0];
         player.pitch -= 0.5f * mouse_pos[1];
-
-        mouse_pos[0] = 0;
-        mouse_pos[1] = 0;
 
         vec3 forward;
         vec3 right;
