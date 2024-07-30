@@ -5,9 +5,6 @@
 #include <graphics.h>
 #include "flecs/addons/flecs_c.h"
 
-typedef struct {
-    mat4 matrix;
-} g_transform;
 
 typedef struct {
     ecs_entity_t entity;

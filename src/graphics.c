@@ -253,9 +253,7 @@ graphics_draw_mesh(g_mesh* mesh) {
         graphics_set_uniform_int(name, i);
         GL_CHECK(glBindTexture(GL_TEXTURE_2D, mesh->textures[i].id));
     }
-    if (mesh->num_t > 0) {
         GL_CHECK(glActiveTexture(GL_TEXTURE0));
-    }
 
     // draw mesh
     GL_CHECK(glBindVertexArray(mesh->vao));
@@ -271,7 +269,9 @@ graphics_begin() {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glEnable(GL_DEPTH_TEST);
     glDisable(GL_CULL_FACE);
-    graphics_use_shader(&active_shader);
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 }
 
 void
@@ -337,7 +337,7 @@ graphics_load_texture(const char* path) {
     unsigned char* data = assets_load_image(path, &width, &height);
     if (data) {
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
-        // glGenerateMipmap(GL_TEXTURE_2D);
+        glGenerateMipmap(GL_TEXTURE_2D);
     } else {
         /* code here */
         fprintf(stderr, "Failed to load image");

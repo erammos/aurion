@@ -165,8 +165,7 @@ create_orb_mesh(float radius, int sectors, int stacks) {
         }
     }
 
-
-   g_mesh orbMesh = graphics_create_mesh(numVertices, numIndices, 0, vertices, indices, nullptr);
+    g_mesh orbMesh = graphics_create_mesh(numVertices, numIndices, 0, vertices, indices, nullptr);
 
     free(vertices);
     free(indices);
@@ -185,18 +184,15 @@ main(void) {
     graphics_init(window);
     gui_init(window);
 
-    g_shader shader;
-    graphics_load_shaders(&shader, "assets/shader.vert", "assets/shader.frag");
     g_shader light_shader;
     graphics_load_shaders(&light_shader, "assets/light.vert", "assets/light.frag");
     g_shader orb_shader;
-    graphics_load_shaders(&orb_shader, "assets/shader.vert", "assets/emissive.frag");
+    graphics_load_shaders(&orb_shader, "assets/emissive.vert", "assets/emissive.frag");
 
     auto mesh_obj = graphics_load_obj("assets/test.obj");
     auto mesh_terrain = graphics_create_terrain(100, 100);
     SDL_Event event;
     create_world();
-    graphics_use_shader(&light_shader);
     bool running = true;
     unsigned int old_time, current_time;
     Uint32 start_time = SDL_GetTicks();
@@ -207,7 +203,6 @@ main(void) {
     g_mesh tunnel = generate_tunnel(10, 1000, 10);
     g_mesh orb = create_orb_mesh(1, 10, 10);
     int mouse_pos[2] = {0};
-    graphics_camera_perspective();
     int frame_count = 0;
     char fps[10] = {0};
     while (running) {
@@ -227,23 +222,26 @@ main(void) {
         world_update(delta);
         graphics_begin();
         graphics_use_shader(&light_shader);
+        graphics_camera_perspective();
         graphics_set_camera(player.pos, (vec3){0.0f, 1.0f, 0.0f}, player.yaw, player.pitch);
-        graphics_set_light((vec3){0, 2, 0}, player.pos);
+        // graphics_set_light((vec3){0, 2, 0}, player.pos);
+
         mat4 model_terrain = GLM_MAT4_IDENTITY_INIT;
         glm_translate(model_terrain, (vec3){-100 / 2, -3, -100 / 2});
         draw_mesh_transform(mesh_terrain, model_terrain);
         draw_mesh_transform(mesh_obj, model_terrain);
-        //draw_mesh_transform(tunnel, model_terrain);
+        draw_mesh_transform(tunnel, model_terrain);
 
-       graphics_use_shader(&orb_shader);
-        vec3 orbColor = {1.0f, 0.5f, 0.0f}; // Orange glow
-        float intensity = 200.0f;             // Control the brightness
-        graphics_set_uniform_vec3( "orbColor", orbColor);
-        graphics_set_uniform_float("intensity", intensity);
+        graphics_use_shader(&orb_shader);
+        graphics_camera_perspective();
+        graphics_set_camera(player.pos, (vec3){0.0f, 1.0f, 0.0f}, player.yaw, player.pitch);
+        graphics_set_uniform_vec3("orbColor", (vec3){0.8f, 0.5f, 0.0f}); // Set orb color
+        graphics_set_uniform_float("intensity", 1000.0f);                   // Set intensity
+        graphics_set_uniform_vec3("centerPosition",(vec3){0.5f, 0.0f, 0.0f} );       // Orb's position
+        graphics_set_uniform_float("radius", 2);
 
         mat4 orb_matrix = GLM_MAT4_IDENTITY_INIT;
-        glm_translate(orb_matrix, (vec3) { 0,5,0});
-        draw_mesh_transform(orb, orb_matrix);
+        draw_mesh_transform(mesh_obj, orb_matrix);
         gui_begin();
 
         gui_draw_text(graphics_get_width() / 2, graphics_get_height() / 2, "+");

@@ -1,6 +1,6 @@
-#ifndef _GRAPHICS_H
-#define _GRAPHICS_H
+#pragma once
 #include <cglm/cglm.h>
+#include "camera.h"
 #ifndef M_PI
 #define M_PI (3.14159265358979323846)
 #endif
@@ -30,13 +30,11 @@ typedef struct {
     unsigned int vao, vbo, ebo;
 } g_mesh;
 
+
+
 typedef struct {
-    vec3 position;
-    vec3 front;
-    vec3 right;
-    vec3 up;
-    vec3 target;
-} g_camera;
+    mat4 matrix;
+} g_transform;
 
 double degrees(double radians);
 double radians(double degrees);
@@ -67,4 +65,3 @@ void graphics_set_uniform_vec3(const char* name, vec3 vec);
 void graphics_set_uniform_float(const char* name, float value);
 void graphics_set_uniform_mat4(const char* name, mat4 matrix);
 void graphics_set_uniform_int(const char* name, int value);
-#endif
