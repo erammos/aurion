@@ -151,7 +151,7 @@ load_shader(GLuint* uiShader, GLenum ShaderType, const GLchar* p_cShader) {
 
 void
 graphics_set_transform(mat4 transform) {
-    GL_CHECK(glUniformMatrix4fv(glGetUniformLocation(active_shader.id, "model"), 1, GL_FALSE, &transform[0][0]));
+    graphics_set_uniform_mat4("model", transform);
 }
 
 int
@@ -215,18 +215,20 @@ graphics_create_gl_buffer(g_mesh* mesh) {
 g_mesh
 graphics_create_mesh(size_t num_vertices, size_t num_indices, size_t num_textures,
                      g_vertex vertices[static num_vertices], unsigned int indices[static num_indices],
-                     g_texture textures[static num_textures]) {
+                     g_texture* textures) {
     g_mesh mesh = {
 
         .num_i = num_indices, .num_v = num_vertices, .num_t = num_textures};
 
     mesh.vertices = calloc(num_vertices, sizeof(g_vertex));
-    mesh.indices = calloc(num_indices, sizeof(unsigned int));
-    mesh.textures = calloc(num_textures, sizeof(g_texture));
-
     memcpy(mesh.vertices, vertices, sizeof(g_vertex) * num_vertices);
+    mesh.indices = calloc(num_indices, sizeof(unsigned int));
     memcpy(mesh.indices, indices, sizeof(unsigned int) * num_indices);
-    memcpy(mesh.textures, textures, sizeof(g_texture) * num_textures);
+
+    if (textures != nullptr && num_textures > 0) {
+        mesh.textures = calloc(num_textures, sizeof(g_texture));
+        memcpy(mesh.textures, textures, sizeof(g_texture) * num_textures);
+    }
     graphics_create_gl_buffer(&mesh);
 
     return mesh;
@@ -248,10 +250,12 @@ graphics_draw_mesh(g_mesh* mesh) {
         }
 
         strcat(name, number);
-        GL_CHECK(glUniform1i(glGetUniformLocation(active_shader.id, name), i));
+        graphics_set_uniform_int(name, i);
         GL_CHECK(glBindTexture(GL_TEXTURE_2D, mesh->textures[i].id));
     }
-    GL_CHECK(glActiveTexture(GL_TEXTURE0));
+    if (mesh->num_t > 0) {
+        GL_CHECK(glActiveTexture(GL_TEXTURE0));
+    }
 
     // draw mesh
     GL_CHECK(glBindVertexArray(mesh->vao));
@@ -297,8 +301,7 @@ graphics_set_camera(vec3 pos, vec3 up, float yaw, float pitch) {
 
     glm_vec3_add(active_camera.position, active_camera.front, active_camera.target);
     glm_lookat(active_camera.position, active_camera.target, active_camera.up, view);
-
-    GL_CHECK(glUniformMatrix4fv(glGetUniformLocation(active_shader.id, "view"), 1, GL_FALSE, &view[0][0]));
+    graphics_set_uniform_mat4("view", view);
 }
 
 g_camera
@@ -310,15 +313,14 @@ void
 graphics_camera_perspective() {
     mat4 projection;
     glm_perspective(radians(45), screen_width / (float)screen_height, 0.1f, 1000.0f, projection);
-    GL_CHECK(glUniformMatrix4fv(glGetUniformLocation(active_shader.id, "projection"), 1, GL_FALSE, &projection[0][0]));
+    graphics_set_uniform_mat4("projection", projection);
 }
 
 void
 graphics_camera_ortho() {
     mat4 orthographic;
     glm_ortho(-1, 1, -1, 1, 0.1f, 100.0f, orthographic);
-    GL_CHECK(
-        glUniformMatrix4fv(glGetUniformLocation(active_shader.id, "projection"), 1, GL_FALSE, &orthographic[0][0]));
+    graphics_set_uniform_mat4("projection", orthographic);
 }
 
 g_texture
@@ -354,8 +356,8 @@ graphics_load_obj(const char* path) {
 
 void
 graphics_set_light(vec3 pos, vec3 viewPos) {
-    GL_CHECK(glUniform3fv(glGetUniformLocation(active_shader.id, "lightPos"), 1, &pos[0]));
-    GL_CHECK(glUniform3fv(glGetUniformLocation(active_shader.id, "viewPos"), 1, &viewPos[0]));
+    graphics_set_uniform_vec3("lightPos", pos);
+    graphics_set_uniform_vec3("viewPos", viewPos);
 }
 
 static float
@@ -447,4 +449,24 @@ graphics_create_terrain(int terrain_width, int terrain_height) {
     auto terrain_mesh = graphics_create_mesh(
         terrain_width * terrain_height, (terrain_width - 1) * (terrain_height - 1) * 6, 1, vertices, indices, textures);
     return terrain_mesh;
+}
+
+void
+graphics_set_uniform_vec3(const char* name, vec3 vec) {
+    GL_CHECK(glUniform3fv(glGetUniformLocation(active_shader.id, name), 1, &vec[0]));
+}
+
+void
+graphics_set_uniform_float(const char* name, float value) {
+    GL_CHECK(glUniform1f(glGetUniformLocation(active_shader.id, name), value));
+}
+
+void
+graphics_set_uniform_mat4(const char* name, mat4 matrix) {
+    GL_CHECK(glUniformMatrix4fv(glGetUniformLocation(active_shader.id, name), 1, GL_FALSE, &matrix[0][0]));
+}
+
+void
+graphics_set_uniform_int(const char* name, int value) {
+    GL_CHECK(glUniform1i(glGetUniformLocation(active_shader.id, name), value));
 }

@@ -43,7 +43,7 @@ double radians(double degrees);
 
 g_mesh graphics_create_mesh(size_t num_vertices, size_t num_indices, size_t num_textures,
                             g_vertex vertices[static num_vertices], unsigned int indices[static num_indices],
-                            g_texture textures[static num_textures]);
+                            g_texture * textures);
 int graphics_init(void* window);
 void graphics_destroy();
 int graphics_load_shaders(g_shader* shader, const char* vs_file, const char* fs_file);
@@ -62,6 +62,9 @@ int graphics_get_height();
 g_mesh graphics_load_obj(const char* path);
 void graphics_set_light(vec3 pos, vec3 viewPos);
 g_mesh graphics_create_terrain(int terrain_width, int terrain_height);
-void
-graphics_create_gl_buffer(g_mesh* mesh);
+void graphics_create_gl_buffer(g_mesh* mesh);
+void graphics_set_uniform_vec3(const char* name, vec3 vec);
+void graphics_set_uniform_float(const char* name, float value);
+void graphics_set_uniform_mat4(const char* name, mat4 matrix);
+void graphics_set_uniform_int(const char* name, int value);
 #endif
