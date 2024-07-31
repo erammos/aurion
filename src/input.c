@@ -17,7 +17,7 @@ input_keyup(SDL_Event* event) {
 }
 
 void
-input_mousemotion(SDL_Event* event, int* mouse_pos) {
+input_mousemotion(SDL_Event* event, float* mouse_pos) {
     mouse_pos[0] = event->motion.xrel;
     mouse_pos[1] = event->motion.yrel;
 }
@@ -29,7 +29,7 @@ input_update_movement_axis(float* input_axis) {
 }
 
 bool
-input_update(float* input_axis, int* mouse_pos) {
+input_update(float* input_axis, float* mouse_pos) {
     bool running = true;
     SDL_Event event;
     gui_input_begin();

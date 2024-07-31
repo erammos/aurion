@@ -9,6 +9,7 @@
 #include "cglm/vec3.h"
 #include "gui.h"
 #include "input.h"
+#include "camera.h"
 
 #define WIDTH  800
 #define HEIGHT 600
@@ -198,33 +199,24 @@ main(void) {
     Uint32 start_time = SDL_GetTicks();
 
     current_time = SDL_GetTicks();
-    vec2 input_axis = {};
-    player_t player = (player_t){.yaw = -90.0f, .pitch = 0, .pos[1] = 5, .pos[2] = 5};
+    vec3 input_axis = {};
     g_mesh tunnel = generate_tunnel(10, 1000, 10);
     g_mesh orb = create_orb_mesh(1, 10, 10);
-    int mouse_pos[2] = {0};
+    vec3 mouse_pos = {0};
     int frame_count = 0;
     char fps[10] = {0};
+    g_camera camera = camera_create();
     while (running) {
         current_time = SDL_GetTicks();
         float delta = (float)(current_time - old_time) / 1000.0f;
         running = input_update(input_axis, mouse_pos);
-        player.yaw += 0.5f * mouse_pos[0];
-        player.pitch -= 0.5f * mouse_pos[1];
-
-        vec3 forward;
-        vec3 right;
-        glm_vec3_scale(graphics_get_active_camera().front, 100 * delta * input_axis[1], forward);
-        glm_vec3_scale(graphics_get_active_camera().right, 100 * delta * input_axis[0], right);
-        glm_vec3_add(player.pos, forward, player.pos);
-        glm_vec3_add(player.pos, right, player.pos);
+      
 
         world_update(delta);
         graphics_begin();
         graphics_use_shader(&light_shader);
-        graphics_camera_perspective();
-        graphics_set_camera(player.pos, (vec3){0.0f, 1.0f, 0.0f}, player.yaw, player.pitch);
-        // graphics_set_light((vec3){0, 2, 0}, player.pos);
+        camera_animate(&camera, mouse_pos, input_axis, 100, 0.5f,delta);
+        graphics_use_camera(&camera);
 
         mat4 model_terrain = GLM_MAT4_IDENTITY_INIT;
         glm_translate(model_terrain, (vec3){-100 / 2, -3, -100 / 2});
@@ -233,8 +225,7 @@ main(void) {
         draw_mesh_transform(tunnel, model_terrain);
 
         graphics_use_shader(&orb_shader);
-        graphics_camera_perspective();
-        graphics_set_camera(player.pos, (vec3){0.0f, 1.0f, 0.0f}, player.yaw, player.pitch);
+        graphics_use_camera(&camera);
         graphics_set_uniform_vec3("orbColor", (vec3){0.8f, 0.5f, 0.0f}); // Set orb color
         graphics_set_uniform_float("intensity", 1000.0f);                   // Set intensity
         graphics_set_uniform_vec3("centerPosition",(vec3){0.5f, 0.0f, 0.0f} );       // Orb's position

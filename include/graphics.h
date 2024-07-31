@@ -30,8 +30,6 @@ typedef struct {
     unsigned int vao, vbo, ebo;
 } g_mesh;
 
-
-
 typedef struct {
     mat4 matrix;
 } g_transform;
@@ -41,7 +39,7 @@ double radians(double degrees);
 
 g_mesh graphics_create_mesh(size_t num_vertices, size_t num_indices, size_t num_textures,
                             g_vertex vertices[static num_vertices], unsigned int indices[static num_indices],
-                            g_texture * textures);
+                            g_texture* textures);
 int graphics_init(void* window);
 void graphics_destroy();
 int graphics_load_shaders(g_shader* shader, const char* vs_file, const char* fs_file);
@@ -49,12 +47,11 @@ void graphics_draw_mesh(g_mesh* mesh);
 void graphics_begin();
 void graphics_end();
 void graphics_use_shader(g_shader* shader);
-void graphics_set_camera(vec3 pos, vec3 up, float yaw, float pitch);
+void graphics_use_camera(g_camera* camera);
 g_texture graphics_load_texture(const char* path);
 void graphics_set_transform(mat4 transform);
-g_camera graphics_get_active_camera();
-void graphics_camera_perspective();
-void graphics_camera_ortho();
+g_camera * 
+graphics_get_active_camera();
 int graphics_get_width();
 int graphics_get_height();
 g_mesh graphics_load_obj(const char* path);

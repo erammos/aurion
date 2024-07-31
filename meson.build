@@ -18,7 +18,8 @@ src = files(
   'src' / 'assets.c',
       'src' / 'gui.c',
       'src' / 'world.c',
-      'src' / 'input.c'
+      'src' / 'input.c',
+      'src' / 'camera.c'
 )
 assets_src = 'assets'       # Path to your assets folder
 build_assets_dir = 'build/assets'  # Destination path in the build directory

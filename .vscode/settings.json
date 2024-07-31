@@ -1,4 +1,4 @@
 {
-    "C_Cpp.default.compileCommands": "/Users/eramm/Projects/aurion/build/compile_commands.json",
+    "C_Cpp.default.compileCommands": "/Users/eliasrammos/aurion/build/compile_commands.json",
     "C_Cpp.default.configurationProvider": "mesonbuild.mesonbuild"
 }
