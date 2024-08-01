@@ -205,7 +205,7 @@ main(void) {
     vec3 mouse_pos = {0};
     int frame_count = 0;
     char fps[10] = {0};
-    g_camera camera = camera_create();
+    g_camera camera = camera_create(graphics_get_width(),graphics_get_height());
     while (running) {
         current_time = SDL_GetTicks();
         float delta = (float)(current_time - old_time) / 1000.0f;
