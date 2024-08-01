@@ -25,9 +25,9 @@ void
 camera_update(g_camera* camera, vec3 pos, vec3 up, float yaw, float pitch) {
     camera->yaw = yaw;
     camera->pitch = pitch;
+    camera->pitch = glm_clamp(camera->pitch, -89, 89);
+
     glm_vec3_copy(pos, camera->pos);
-
-
     calculate_front(camera);
 
     glm_cross(camera->front, up, camera->right);
@@ -51,14 +51,9 @@ camera_animate(g_camera* camera, vec3 mouse_pos, vec3 input_axis, float speed, f
     vec3 front;
     vec3 right;
 
-    camera->yaw += sensitivity * mouse_pos[0];
-    camera->pitch -= sensitivity * mouse_pos[1];
- //   camera->pitch = glm_clamp(camera->pitch, -89, 89);
-
-
     glm_vec3_scale(camera->front, speed * dt * input_axis[1], front);
     glm_vec3_scale(camera->right, speed * dt * input_axis[0], right);
     glm_vec3_add(camera->pos, front, camera->pos);
     glm_vec3_add(camera->pos, right, camera->pos);
-    camera_update(camera, camera->pos, camera->up, camera->yaw, camera->pitch);
+    camera_update(camera, camera->pos, (vec3){0,1,0}, camera->yaw + sensitivity * mouse_pos[0], camera->pitch - sensitivity * mouse_pos[1]);
 }
