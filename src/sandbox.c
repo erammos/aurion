@@ -4,12 +4,12 @@
 #include <stdlib.h>
 #include <sys/_types/_mode_t.h>
 #include <world.h>
+#include "camera.h"
 #include "cglm/affine-pre.h"
 #include "cglm/mat4.h"
 #include "cglm/vec3.h"
 #include "gui.h"
 #include "input.h"
-#include "camera.h"
 
 #define WIDTH  800
 #define HEIGHT 600
@@ -190,10 +190,16 @@ main(void) {
     g_shader orb_shader;
     graphics_load_shaders(&orb_shader, "assets/emissive.vert", "assets/emissive.frag");
 
-    auto mesh_obj = graphics_load_obj("assets/test.obj");
-    auto mesh_terrain = graphics_create_terrain(100, 100);
-    SDL_Event event;
     create_world();
+    auto mesh_terrain = graphics_create_terrain(100, 100);
+    auto terrain = world_create_entity("terrain", (vec3){0, 0, 0}, (vec3){1, 1, 1}, 0, (vec3){0, 1, 0}, world);
+    world_add_mesh(terrain, &mesh_terrain);
+
+    auto cube = world_create_entity("cube", (vec3){50, 0.5f, 50}, (vec3){1, 1, 1}, 0, (vec3){0, 1, 0}, terrain.entity);
+    auto mesh_obj = graphics_load_obj("assets/test.obj");
+    world_add_mesh(cube, &mesh_obj);
+
+    SDL_Event event;
     bool running = true;
     unsigned int old_time, current_time;
     Uint32 start_time = SDL_GetTicks();
@@ -205,34 +211,33 @@ main(void) {
     vec3 mouse_pos = {0};
     int frame_count = 0;
     char fps[10] = {0};
-    g_camera camera = camera_create(graphics_get_width(),graphics_get_height());
+    g_camera camera = camera_create(graphics_get_width(), graphics_get_height());
     while (running) {
         current_time = SDL_GetTicks();
         float delta = (float)(current_time - old_time) / 1000.0f;
         running = input_update(input_axis, mouse_pos);
-      
 
         world_update(delta);
         graphics_begin();
         graphics_use_shader(&light_shader);
-        camera_animate(&camera, mouse_pos, input_axis, 100, 0.5f,delta);
+        camera_animate(&camera, mouse_pos, input_axis, 100, 0.5f, delta);
         graphics_use_camera(&camera);
+        world_draw();
+        // mat4 model_terrain = GLM_MAT4_IDENTITY_INIT;
+        // glm_translate(model_terrain, (vec3){-100 / 2, -3, -100 / 2});
+        // draw_mesh_transform(mesh_terrain, model_terrain);
+        // draw_mesh_transform(mesh_obj, model_terrain);
+        // draw_mesh_transform(tunnel, model_terrain);
 
-        mat4 model_terrain = GLM_MAT4_IDENTITY_INIT;
-        glm_translate(model_terrain, (vec3){-100 / 2, -3, -100 / 2});
-        draw_mesh_transform(mesh_terrain, model_terrain);
-        draw_mesh_transform(mesh_obj, model_terrain);
-        draw_mesh_transform(tunnel, model_terrain);
+        // graphics_use_shader(&orb_shader);
+        // graphics_use_camera(&camera);
+        // graphics_set_uniform_vec3("orbColor", (vec3){0.8f, 0.5f, 0.0f});       // Set orb color
+        // graphics_set_uniform_float("intensity", 1000.0f);                      // Set intensity
+        // graphics_set_uniform_vec3("centerPosition", (vec3){0.5f, 0.0f, 0.0f}); // Orb's position
+        // graphics_set_uniform_float("radius", 2);
 
-        graphics_use_shader(&orb_shader);
-        graphics_use_camera(&camera);
-        graphics_set_uniform_vec3("orbColor", (vec3){0.8f, 0.5f, 0.0f}); // Set orb color
-        graphics_set_uniform_float("intensity", 1000.0f);                   // Set intensity
-        graphics_set_uniform_vec3("centerPosition",(vec3){0.5f, 0.0f, 0.0f} );       // Orb's position
-        graphics_set_uniform_float("radius", 2);
-
-        mat4 orb_matrix = GLM_MAT4_IDENTITY_INIT;
-        draw_mesh_transform(mesh_obj, orb_matrix);
+        // mat4 orb_matrix = GLM_MAT4_IDENTITY_INIT;
+        // draw_mesh_transform(mesh_obj, orb_matrix);
         gui_begin();
 
         gui_draw_text(graphics_get_width() / 2, graphics_get_height() / 2, "+");
