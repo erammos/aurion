@@ -47,7 +47,7 @@ camera_set_perspective(g_camera* camera, float fov, float aspect, float near, fl
 };
 
 void
-camera_animate(g_camera* camera, vec3 mouse_pos, vec3 input_axis, float speed, float sensitivity, float dt) {
+camera_free_animate(g_camera* camera, vec3 mouse_pos, vec3 input_axis, float speed, float sensitivity, float dt) {
     vec3 front;
     vec3 right;
 
@@ -55,6 +55,21 @@ camera_animate(g_camera* camera, vec3 mouse_pos, vec3 input_axis, float speed, f
     glm_vec3_scale(camera->right, speed * dt * input_axis[0], right);
     glm_vec3_add(camera->pos, front, camera->pos);
     glm_vec3_add(camera->pos, right, camera->pos);
+    camera_update(camera, camera->pos, (vec3){0, 1, 0}, camera->yaw + sensitivity * mouse_pos[0],
+                  camera->pitch - sensitivity * mouse_pos[1]);
+}
+void
+camera_locked_animate(g_camera* camera, vec3 mouse_pos, vec3 input_axis, float speed, float sensitivity, float dt) {
+
+    vec3 front;
+    vec3 right;
+
+    glm_vec3_scale(camera->front, speed * dt * input_axis[1], front);
+    glm_vec3_scale(camera->right, speed * dt * input_axis[0], right);
+    camera->pos[0] += front[0];
+    camera->pos[2] += front[2];
+    camera->pos[0] += right[0];
+    camera->pos[2] += right[2];
     camera_update(camera, camera->pos, (vec3){0, 1, 0}, camera->yaw + sensitivity * mouse_pos[0],
                   camera->pitch - sensitivity * mouse_pos[1]);
 }

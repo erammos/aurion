@@ -31,6 +31,7 @@ update_transform(ecs_iter_t* it) {
         //    glm_mat4_print(world[i].matrix,stdout);
     }
 }
+
 void
 render(ecs_iter_t* it) {
     g_transform* model = ecs_field(it, g_transform, 0);
@@ -76,6 +77,8 @@ create_world() {
                   },
               .callback = render});
     world = ecs_entity(ecs, {.name = "root"});
+
+
 }
 
 void
@@ -128,5 +131,5 @@ world_draw() {
 
 void
 world_update(float dt) {
-      ecs_run(ecs, update_system, 0, 0);
+    ecs_run(ecs, update_system, 0, 0);
 }

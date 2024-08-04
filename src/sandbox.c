@@ -7,6 +7,7 @@
 #include "camera.h"
 #include "cglm/affine-pre.h"
 #include "cglm/mat4.h"
+#include "cglm/util.h"
 #include "cglm/vec3.h"
 #include "gui.h"
 #include "input.h"
@@ -212,6 +213,8 @@ main(void) {
     int frame_count = 0;
     char fps[10] = {0};
     g_camera camera = camera_create(graphics_get_width(), graphics_get_height());
+    camera_update(&camera, (vec3) {50,1.0f,50}, (vec3) {0,1,0}, -90, 0);
+    
     while (running) {
         current_time = SDL_GetTicks();
         float delta = (float)(current_time - old_time) / 1000.0f;
@@ -220,7 +223,8 @@ main(void) {
         world_update(delta);
         graphics_begin();
         graphics_use_shader(&light_shader);
-        camera_animate(&camera, mouse_pos, input_axis, 100, 0.5f, delta);
+        camera.pos[1] = mesh_terrain.vertices[(int)camera.pos[0] + 100 * (int)camera.pos[2]].position[1] + 2;
+        camera_locked_animate(&camera, mouse_pos, input_axis, 10, 0.5f, delta);
         graphics_use_camera(&camera);
         world_draw();
         // mat4 model_terrain = GLM_MAT4_IDENTITY_INIT;
