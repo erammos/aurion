@@ -1,7 +1,6 @@
 #pragma once
 
-#include "cglm/types.h"
-#include "cglm/vec3.h"
+#include "cglm/cglm.h"
 
 typedef struct {
     vec3 pos;

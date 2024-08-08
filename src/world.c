@@ -1,13 +1,20 @@
 #include <world.h>
 #include "cglm/affine-pre.h"
+#include "cglm/euler.h"
 #include "cglm/mat4.h"
+#include "cglm/types.h"
+#include "cglm/util.h"
 #include "flecs.h"
 #include "flecs/addons/flecs_c.h"
+#include "graphics.h"
 static ecs_world_t* ecs;
 static ecs_entity_t update_system;
 static ecs_entity_t render_system;
 
 ECS_COMPONENT_DECLARE(g_transform);
+ECS_COMPONENT_DECLARE(g_position);
+ECS_COMPONENT_DECLARE(g_rotation);
+ECS_COMPONENT_DECLARE(g_scale);
 ECS_COMPONENT_DECLARE(g_mesh);
 ECS_TAG_DECLARE(World);
 ECS_TAG_DECLARE(Local);
@@ -48,6 +55,10 @@ create_world() {
     ecs = ecs_init();
     ECS_COMPONENT_DEFINE(ecs, g_transform);
     ECS_COMPONENT_DEFINE(ecs, g_mesh);
+    ECS_COMPONENT_DEFINE(ecs, g_position);
+    ECS_COMPONENT_DEFINE(ecs, g_rotation);
+    ECS_COMPONENT_DEFINE(ecs, g_scale);
+
     ECS_TAG_DEFINE(ecs, World);
     ECS_TAG_DEFINE(ecs, Local);
     update_system = ecs_system(
@@ -77,8 +88,6 @@ create_world() {
                   },
               .callback = render});
     world = ecs_entity(ecs, {.name = "root"});
-
-
 }
 
 void
@@ -87,22 +96,31 @@ destroy_world() {
 }
 
 void
-world_transform_entity(g_entity e, vec3 pos, vec3 scale, float angle, vec3 axis) {
+world_transform_entity(g_entity e, vec3 pos, vec3 scale, vec3 rotate) {
     auto p = ecs_get_mut_pair(ecs, e.entity, g_transform, Local);
-    glm_translate(p->matrix, (vec3){pos[0], pos[1], pos[2]});
-    glm_rotate(p->matrix, angle, axis);
-    glm_scale(p->matrix, scale);
+    ecs_set(ecs, e.entity, g_position, {.position = {pos[0], pos[1], pos[2]}});
+    ecs_set(ecs, e.entity, g_rotation, {.rotation = {rotate[0], rotate[1], rotate[2]}});
+    ecs_set(ecs, e.entity, g_scale, {.scale = {scale[0], scale[1], scale[2]}});
+
+    mat4 rotation_mat;
+    mat4 scale_mat;
+    mat4 translation_mat;
+    glm_translate_make(translation_mat, (vec3){pos[0], pos[1], pos[2]});
+    glm_euler((vec3){glm_rad(rotate[0]), glm_rad(rotate[1]), glm_rad(rotate[2])}, rotation_mat);
+    glm_scale_make(scale_mat, scale);
+    glm_mul(rotation_mat, scale_mat, p->matrix);
+    glm_mul(translation_mat, p->matrix, p->matrix);
 }
 
 g_entity
-world_create_entity(const char* name, vec3 pos, vec3 scale, float angle, vec3 axis, ecs_entity_t parent) {
+world_create_entity(const char* name, vec3 pos, vec3 scale, vec3 rotate, ecs_entity_t parent) {
 
     ecs_entity_t e = ecs_entity(ecs, {.name = name});
     ecs_set_pair(ecs, e, g_transform, World, {GLM_MAT4_IDENTITY_INIT});
     ecs_set_pair(ecs, e, g_transform, Local, {GLM_MAT4_IDENTITY_INIT});
     ecs_add_pair(ecs, e, EcsChildOf, parent);
     auto out = (g_entity){.entity = e, .parent = parent};
-    world_transform_entity(out, pos, scale, angle, axis);
+    world_transform_entity(out, pos, scale, rotate);
     return out;
 }
 
@@ -122,6 +140,24 @@ void
 world_get_world_transform(g_entity e, mat4** out) {
     auto p = ecs_get_mut_pair(ecs, e.entity, g_transform, World);
     *out = &p->matrix;
+}
+
+g_position
+world_get_position(g_entity e) {
+    auto p = ecs_get(ecs, e.entity, g_position);
+    return *p;
+}
+
+g_rotation
+world_get_rotation(g_entity e) {
+    auto p = ecs_get(ecs, e.entity, g_rotation);
+    return *p;
+}
+
+g_scale
+world_get_scale(g_entity e) {
+    auto p = ecs_get(ecs, e.entity, g_scale);
+    return *p;
 }
 
 void

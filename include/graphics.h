@@ -33,6 +33,15 @@ typedef struct {
 typedef struct {
     mat4 matrix;
 } g_transform;
+typedef struct {
+    vec3 position; 
+} g_position;
+typedef struct {
+    vec3 rotation; 
+} g_rotation;
+typedef struct {
+    vec3 scale; 
+} g_scale;
 
 double degrees(double radians);
 double radians(double degrees);
