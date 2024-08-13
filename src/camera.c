@@ -18,8 +18,9 @@ camera_update(g_camera* camera, vec3 pos, vec3 up, float yaw, float pitch) {
     camera->yaw = yaw;
     camera->pitch = pitch;
     camera->pitch = glm_clamp(camera->pitch, -89, 89);
+    camera->roll = 0;
     glm_mat4_identity(camera->view);
-    glm_euler((vec3){glm_rad(camera->pitch), glm_rad(camera->yaw), 0}, camera->view);
+    glm_euler((vec3){glm_rad(camera->pitch), glm_rad(camera->yaw), glm_rad((camera->roll))}, camera->view);
     glm_translate(camera->view ,(vec3){-pos[0], -pos[1], -pos[2]});
     glm_vec3_copy(pos, camera->pos);
 }

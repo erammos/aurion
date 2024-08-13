@@ -9,6 +9,7 @@ typedef struct {
     vec3 right;
     float yaw;
     float pitch;
+    float roll;
     mat4 view;
     mat4 projection;
 } g_camera;
