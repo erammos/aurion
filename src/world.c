@@ -99,6 +99,9 @@ void
 world_transform_entity(g_entity e, vec3 pos, vec3 scale, vec3 rotate) {
     auto p = ecs_get_mut_pair(ecs, e.entity, g_transform, Local);
 
+     ecs_set(ecs, e.entity, g_position, {.position = {pos[0], pos[1], pos[2]}});
+     ecs_set(ecs, e.entity, g_rotation, {.rotation = {rotate[0], rotate[1], rotate[2]}});
+     ecs_set(ecs, e.entity, g_scale, {.scale = {scale[0], scale[1], scale[2]}});
     mat4 rotation_mat;
     mat4 scale_mat;
     mat4 translation_mat;

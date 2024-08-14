@@ -6,6 +6,8 @@
 #include <world.h>
 #include "camera.h"
 #include "cglm/affine-pre.h"
+#include "cglm/affine.h"
+#include "cglm/call/affine.h"
 #include "cglm/io.h"
 #include "cglm/mat4.h"
 #include "cglm/util.h"
@@ -184,25 +186,20 @@ player_move(g_entity e, vec3 mouse_pos, vec3 input_axis, float speed, float sens
     world_get_local_transform(e, &matrix);
 
     g_rotation* g_rotation = world_get_rotation(e);
-    vec3 front, right;
-    front[0] = cos(glm_rad(g_rotation->rotation[1])) * cos(glm_rad(g_rotation->rotation[0]));
-    front[1] = sin(glm_rad(g_rotation->rotation[0]));
-    front[2] = sin(glm_rad(g_rotation->rotation[1])) * cos(glm_rad(g_rotation->rotation[0]));
-    glm_normalize(front);
-    glm_vec3_cross((vec3){0.0, 1.0, 0.0f}, front, right);
-    glm_vec3_normalize(right);
-    sprintf(front_log, "%f %f %f", front[0],front[1],front[2]);
+    vec2 dir;
+    float scale = speed * dt * input_axis[1];
+    dir[0] = sin(glm_rad(g_rotation->rotation[1]));
+    dir[1] = cos(glm_rad(g_rotation->rotation[1]));
+    sprintf(front_log, "%f %f", dir[0],dir[1]);
     sprintf(rot_log, "%f %f %f", g_rotation->rotation[0],g_rotation->rotation[1],g_rotation->rotation[2]);
-    glm_vec3_scale(front, speed * dt * input_axis[1], front);
-    glm_vec3_scale(right, speed * dt * input_axis[0], right);
     g_position* g_pos = world_get_position(e);
     g_scale* g_scale = world_get_scale(e);
 
-    front[1] = 0;
-    glm_vec3_add(g_pos->position, front, g_pos->position);
 
+    g_pos->position[0]+= scale * dir[0];
+    g_pos->position[2]+= scale * dir[1];
     g_rotation->rotation[1] += sensitivity * mouse_pos[0];
-    g_rotation->rotation[0] -= sensitivity * mouse_pos[1];
+    g_rotation->rotation[0] += sensitivity * mouse_pos[1];
     g_rotation->rotation[2] = 0;
     world_transform_entity(e, g_pos->position, g_scale->scale, g_rotation->rotation);
 }
@@ -229,14 +226,14 @@ main(void) {
     world_add_mesh(terrain, &mesh_terrain);
 
     //    auto cube = world_create_entity("cube", (vec3){50, 0.5f, 50}, (vec3){1, 1, 2},  (vec3){0, 0, 0}, terrain.entity);
-    auto player = world_create_entity("player", (vec3){50, 0.5f, 50}, (vec3){1.0f, 01.0f, 1.0f}, (vec3){0, 0, 0},
+    auto player = world_create_entity("player", (vec3){50, 0.5f, 50}, (vec3){1.0f, 1.0f, 1.0f}, (vec3){0, 0, 0},
                                       world);
-    auto e_camera = world_create_entity("camera", (vec3){0, 0, 0}, (vec3){1, 1, 1}, (vec3){0, 0, 0}, terrain.entity);
+    auto e_camera = world_create_entity("camera", (vec3){0, 10, -10}, (vec3){1.0f, 1.0f, 1.0f}, (vec3){30, -180, 0}, player.entity);
 
     auto mesh_obj = graphics_load_obj("assets/test.obj");
     //   world_add_mesh(cube, &mesh_obj);
     world_add_mesh(player, &mesh_obj);
-
+  //  world_add_mesh(e_camera, &mesh_obj);
     SDL_Event event;
     bool running = true;
     unsigned int old_time, current_time;
@@ -250,7 +247,7 @@ main(void) {
     int frame_count = 0;
     char fps[10] = {0};
     g_camera camera = camera_create(graphics_get_width(), graphics_get_height());
-    camera_update(&camera, (vec3){50, 1.0f, 50 - 5}, (vec3){0, 1, 0}, 180, 0);
+    camera_update(&camera, (vec3){50, 1.0f, 50 - 5}, (vec3){0, 1, 0}, -180, 0);
 
     while (running) {
         current_time = SDL_GetTicks();
@@ -259,35 +256,26 @@ main(void) {
 
         //world_transform_entity(g_entity e, float *pos, float *scale, float *rotate)
 
-        // camera.pos[1] = mesh_terrain.vertices[(int)camera.pos[0] + 100 * (int)camera.pos[2]].position[1] + 2;
-        //        camera_locked_animate(&camera, mouse_pos, input_axis, 10, 0.5f, delta);
-        player_move(player, mouse_pos, input_axis, 10, 0.5f, delta);
-        // mat4 * player_model;
-        // world_get_local_transform(player, &player_model);
-        //  glm_mat4_inv(*player_model,camera.view);
-        // glm_mat4_copy(camera.view, *camera_model);
-
-        world_update(delta);
+        // camera.pos[1] = 2;
+          //    camera_locked_animate(&camera, mouse_pos, input_axis, 10, 0.5f, delta);
+       player_move(player, mouse_pos, input_axis, 10, 0.5f, delta);
+       world_update(delta);
+         
+         mat4 * camera_model;
+         world_get_world_transform(e_camera, &camera_model);
+        // glm_mat4_copy(*camera_model, camera.view);
+        //  camera.view[3][0] = -camera.view[3][0];
+        //  camera.view[3][1] = -camera.view[3][1];
+        //  camera.view[3][2] = -camera.view[3][2];
+        //  camera.view[3][3] = 1;
+        glm_mat4_inv(*camera_model,camera.view);
+   
+        //glm_mat4_print(camera.view,stdout);
         graphics_begin();
         graphics_use_shader(&light_shader);
 
         graphics_use_camera(&camera);
         world_draw();
-        // mat4 model_terrain = GLM_MAT4_IDENTITY_INIT;
-        // glm_translate(model_terrain, (vec3){-100 / 2, -3, -100 / 2});
-        // draw_mesh_transform(mesh_terrain, model_terrain);
-        // draw_mesh_transform(mesh_obj, model_terrain);
-        // draw_mesh_transform(tunnel, model_terrain);
-
-        // graphics_use_shader(&orb_shader);
-        // graphics_use_camera(&camera);
-        // graphics_set_uniform_vec3("orbColor", (vec3){0.8f, 0.5f, 0.0f});       // Set orb color
-        // graphics_set_uniform_float("intensity", 1000.0f);                      // Set intensity
-        // graphics_set_uniform_vec3("centerPosition", (vec3){0.5f, 0.0f, 0.0f}); // Orb's position
-        // graphics_set_uniform_float("radius", 2);
-
-        // mat4 orb_matrix = GLM_MAT4_IDENTITY_INIT;
-        // draw_mesh_transform(mesh_obj, orb_matrix);
         gui_begin();
 
         gui_draw_text(graphics_get_width() / 2, graphics_get_height() / 2, "+");
