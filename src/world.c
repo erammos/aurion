@@ -99,9 +99,9 @@ void
 world_transform_entity(g_entity e, vec3 pos, vec3 scale, vec3 rotate) {
     auto p = ecs_get_mut_pair(ecs, e.entity, g_transform, Local);
 
-     ecs_set(ecs, e.entity, g_position, {.position = {pos[0], pos[1], pos[2]}});
-     ecs_set(ecs, e.entity, g_rotation, {.rotation = {rotate[0], rotate[1], rotate[2]}});
-     ecs_set(ecs, e.entity, g_scale, {.scale = {scale[0], scale[1], scale[2]}});
+    ecs_set(ecs, e.entity, g_position, {.position = {pos[0], pos[1], pos[2]}});
+    ecs_set(ecs, e.entity, g_rotation, {.rotation = {rotate[0], rotate[1], rotate[2]}});
+    ecs_set(ecs, e.entity, g_scale, {.scale = {scale[0], scale[1], scale[2]}});
     mat4 rotation_mat;
     mat4 scale_mat;
     mat4 translation_mat;
@@ -112,13 +112,38 @@ world_transform_entity(g_entity e, vec3 pos, vec3 scale, vec3 rotate) {
     glm_mul(translation_mat, p->matrix, p->matrix);
 }
 
+void
+world_translate_entity(g_entity e, vec3 pos) {
+    auto p = ecs_get_mut_pair(ecs, e.entity, g_transform, Local);
+    glm_translate(p->matrix, pos);
+}
+
+void
+world_scale_entity(g_entity e, vec3 scale) {
+    auto p = ecs_get_mut_pair(ecs, e.entity, g_transform, Local);
+    glm_scale(p->matrix, scale);
+}
+
+void
+world_rotate_entity(g_entity e, float angle, vec3 axis) {
+    auto p = ecs_get_mut_pair(ecs, e.entity, g_transform, Local);
+    glm_rotate(p->matrix, glm_rad(angle), axis);
+}
+
+void
+world_reset_entity(g_entity e) {
+
+    auto p = ecs_get_mut_pair(ecs, e.entity, g_transform, Local);
+    glm_mat4_identity(p->matrix);
+}
+
 g_entity
 world_create_entity(const char* name, vec3 pos, vec3 scale, vec3 rotate, ecs_entity_t parent) {
 
     ecs_entity_t e = ecs_entity(ecs, {.name = name});
-     ecs_set(ecs, e, g_position, {.position = {pos[0], pos[1], pos[2]}});
-     ecs_set(ecs, e, g_rotation, {.rotation = {rotate[0], rotate[1], rotate[2]}});
-     ecs_set(ecs, e, g_scale, {.scale = {scale[0], scale[1], scale[2]}});
+    ecs_set(ecs, e, g_position, {.position = {pos[0], pos[1], pos[2]}});
+    ecs_set(ecs, e, g_rotation, {.rotation = {rotate[0], rotate[1], rotate[2]}});
+    ecs_set(ecs, e, g_scale, {.scale = {scale[0], scale[1], scale[2]}});
     ecs_set_pair(ecs, e, g_transform, World, {GLM_MAT4_IDENTITY_INIT});
     ecs_set_pair(ecs, e, g_transform, Local, {GLM_MAT4_IDENTITY_INIT});
     ecs_add_pair(ecs, e, EcsChildOf, parent);
@@ -145,19 +170,19 @@ world_get_world_transform(g_entity e, mat4** out) {
     *out = &p->matrix;
 }
 
-g_position * 
+g_position*
 world_get_position(g_entity e) {
     auto p = ecs_get_mut(ecs, e.entity, g_position);
     return p;
 }
 
-g_rotation * 
+g_rotation*
 world_get_rotation(g_entity e) {
     auto p = ecs_get_mut(ecs, e.entity, g_rotation);
     return p;
 }
 
-g_scale * 
+g_scale*
 world_get_scale(g_entity e) {
     auto p = ecs_get_mut(ecs, e.entity, g_scale);
     return p;

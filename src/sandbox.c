@@ -177,8 +177,10 @@ create_orb_mesh(float radius, int sectors, int stacks) {
 
     return orbMesh;
 }
+
 char front_log[100] = {0};
 char rot_log[100] = {0};
+
 void
 player_move(g_entity e, vec3 mouse_pos, vec3 input_axis, float speed, float sensitivity, float dt) {
 
@@ -190,18 +192,35 @@ player_move(g_entity e, vec3 mouse_pos, vec3 input_axis, float speed, float sens
     float scale = speed * dt * input_axis[1];
     dir[0] = sin(glm_rad(g_rotation->rotation[1]));
     dir[1] = cos(glm_rad(g_rotation->rotation[1]));
-    sprintf(front_log, "%f %f", dir[0],dir[1]);
-    sprintf(rot_log, "%f %f %f", g_rotation->rotation[0],g_rotation->rotation[1],g_rotation->rotation[2]);
+    sprintf(front_log, "%f %f", dir[0], dir[1]);
+    sprintf(rot_log, "%f %f %f", g_rotation->rotation[0], g_rotation->rotation[1], g_rotation->rotation[2]);
     g_position* g_pos = world_get_position(e);
     g_scale* g_scale = world_get_scale(e);
 
-
-    g_pos->position[0]+= scale * dir[0];
-    g_pos->position[2]+= scale * dir[1];
+    g_pos->position[0] += scale * dir[0];
+    g_pos->position[2] += scale * dir[1];
     g_rotation->rotation[1] += sensitivity * mouse_pos[0];
     g_rotation->rotation[0] += sensitivity * mouse_pos[1];
+
+    // g_rotation->rotation[1] = glm_clamp(g_rotation->rotation[1], 0,360);
+    //g_rotation->rotation[0] = glm_clamp(g_rotation->rotation[0], 0,45);
     g_rotation->rotation[2] = 0;
-    world_transform_entity(e, g_pos->position, g_scale->scale, g_rotation->rotation);
+    world_reset_entity(e);
+    world_translate_entity(e, g_pos->position);
+    world_rotate_entity(e, g_rotation->rotation[1], (vec3){0, 1, 0});
+    world_rotate_entity(e, g_rotation->rotation[0], (vec3){1, 0, 0});
+    //    world_transform_entity(e, g_pos->position, g_scale->scale, g_rotation->rotation);
+}
+
+g_position
+get_global_position(g_entity e) {
+    g_position position;
+    mat4* model;
+    world_get_world_transform(e, &model);
+    mat4 r;
+    vec3 s;
+    glm_decompose(*model, position.position, r, s);
+    return position;
 }
 
 int
@@ -226,14 +245,14 @@ main(void) {
     world_add_mesh(terrain, &mesh_terrain);
 
     //    auto cube = world_create_entity("cube", (vec3){50, 0.5f, 50}, (vec3){1, 1, 2},  (vec3){0, 0, 0}, terrain.entity);
-    auto player = world_create_entity("player", (vec3){50, 0.5f, 50}, (vec3){1.0f, 1.0f, 1.0f}, (vec3){0, 0, 0},
-                                      world);
-    auto e_camera = world_create_entity("camera", (vec3){0, 10, -10}, (vec3){1.0f, 1.0f, 1.0f}, (vec3){30, -180, 0}, player.entity);
+    auto player = world_create_entity("player", (vec3){50, 0.5f, 50}, (vec3){1.0f, 1.0f, 1.0f}, (vec3){0, 0, 0}, world);
+    auto e_camera = world_create_entity("camera", (vec3){0, 10, -10}, (vec3){1.0f, 1.0f, 1.0f}, (vec3){30, -180, 0},
+                                        player.entity);
 
     auto mesh_obj = graphics_load_obj("assets/test.obj");
     //   world_add_mesh(cube, &mesh_obj);
     world_add_mesh(player, &mesh_obj);
-  //  world_add_mesh(e_camera, &mesh_obj);
+    //  world_add_mesh(e_camera, &mesh_obj);
     SDL_Event event;
     bool running = true;
     unsigned int old_time, current_time;
@@ -254,23 +273,16 @@ main(void) {
         float delta = (float)(current_time - old_time) / 1000.0f;
         running = input_update(input_axis, mouse_pos);
 
-        //world_transform_entity(g_entity e, float *pos, float *scale, float *rotate)
+        player_move(player, mouse_pos, input_axis, 10, 0.5f, delta);
+        world_update(delta);
 
-        // camera.pos[1] = 2;
-          //    camera_locked_animate(&camera, mouse_pos, input_axis, 10, 0.5f, delta);
-       player_move(player, mouse_pos, input_axis, 10, 0.5f, delta);
-       world_update(delta);
-         
-         mat4 * camera_model;
-         world_get_world_transform(e_camera, &camera_model);
-        // glm_mat4_copy(*camera_model, camera.view);
-        //  camera.view[3][0] = -camera.view[3][0];
-        //  camera.view[3][1] = -camera.view[3][1];
-        //  camera.view[3][2] = -camera.view[3][2];
-        //  camera.view[3][3] = 1;
-        glm_mat4_inv(*camera_model,camera.view);
-   
-        //glm_mat4_print(camera.view,stdout);
+        mat4* model;
+        world_get_world_transform(e_camera, &model);
+         glm_mat4_inv(*model,camera.view);
+        //auto camera_pos = get_global_position(e_camera);
+        // auto player_pos = get_global_position(player);
+        //glm_lookat(camera_pos.position, player_pos.position, (vec3){0, 1, 0}, camera.view);
+
         graphics_begin();
         graphics_use_shader(&light_shader);
 
@@ -281,8 +293,8 @@ main(void) {
         gui_draw_text(graphics_get_width() / 2, graphics_get_height() / 2, "+");
 
         gui_draw_text(10, 10, fps);
-        gui_draw_text(10,50,front_log);
-        gui_draw_text(10,90,rot_log);
+        gui_draw_text(10, 50, front_log);
+        gui_draw_text(10, 90, rot_log);
         Uint32 current_time = SDL_GetTicks();
         if (current_time - start_time >= 1000) {
             sprintf(fps, "%d", frame_count);

@@ -20,11 +20,11 @@ void world_add_mesh(g_entity e, g_mesh* m);
 void world_draw();
 void world_destroy();
 void world_transform_entity(g_entity e, vec3 pos, vec3 scale, vec3 rotate);
-g_position * 
-world_get_position(g_entity e); 
-
-g_rotation * 
-world_get_rotation(g_entity e);
-g_scale * 
-world_get_scale(g_entity e);
+g_position* world_get_position(g_entity e);
+g_rotation* world_get_rotation(g_entity e);
+g_scale* world_get_scale(g_entity e);
+void world_translate_entity(g_entity e, vec3 pos);
+void world_scale_entity(g_entity e, vec3 scale);
+void world_rotate_entity(g_entity e, float angle, vec3 axis);
+void world_reset_entity(g_entity e);
 #endif
