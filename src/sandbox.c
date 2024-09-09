@@ -250,18 +250,13 @@ main(void) {
                                         player.entity);
 
     auto mesh_obj = graphics_load_obj("assets/test.obj");
-    //   world_add_mesh(cube, &mesh_obj);
     world_add_mesh(player, &mesh_obj);
-    //  world_add_mesh(e_camera, &mesh_obj);
-    SDL_Event event;
     bool running = true;
     unsigned int old_time, current_time;
     Uint32 start_time = SDL_GetTicks();
 
     current_time = SDL_GetTicks();
     vec3 input_axis = {};
-    g_mesh tunnel = generate_tunnel(10, 1000, 10);
-    g_mesh orb = create_orb_mesh(1, 10, 10);
     vec3 mouse_pos = {0};
     int frame_count = 0;
     char fps[10] = {0};
@@ -278,10 +273,7 @@ main(void) {
 
         mat4* model;
         world_get_world_transform(e_camera, &model);
-         glm_mat4_inv(*model,camera.view);
-        //auto camera_pos = get_global_position(e_camera);
-        // auto player_pos = get_global_position(player);
-        //glm_lookat(camera_pos.position, player_pos.position, (vec3){0, 1, 0}, camera.view);
+        glm_mat4_inv(*model, camera.view);
 
         graphics_begin();
         graphics_use_shader(&light_shader);
