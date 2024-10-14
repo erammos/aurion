@@ -18,3 +18,4 @@ void main() {
     vec3 color = mix(orbColor * intensity, vec3(0.0), edgeFactor);
     FragColor = vec4(color, 1.0);
 }
+

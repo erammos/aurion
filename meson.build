@@ -2,8 +2,9 @@ project(
   'aurion',
   ['c'],
   version: '0.1',
-  default_options: ['warning_level=3', 'c_std=c23'],
+  default_options: ['warning_level=3', 'c_std=c2x'],
 )
+
 sdl_dep = dependency('SDL2')
 flecs_dep = dependency('flecs')
 cglm_dep = dependency('cglm')
