@@ -17,4 +17,3 @@ void main() {
     fragUV = aTexCoords;
     gl_Position = projection * view * vec4(fragPosition, 1.0);
 }
-

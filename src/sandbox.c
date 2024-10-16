@@ -17,23 +17,6 @@
 #define WIDTH  800
 #define HEIGHT 600
 
-static void
-draw_mesh(g_mesh mesh, mat4 parent, vec3 translate, vec3 scale, vec3 rotate, float angle) {
-    mat4 model = GLM_MAT4_IDENTITY_INIT;
-    glm_translate(model, translate);
-    glm_scale(model, scale);
-    glm_rotate(model, radians(angle), rotate);
-    mat4 out;
-    glm_mat4_mul(parent, model, out);
-    graphics_set_transform(out);
-    graphics_draw_mesh(&mesh);
-}
-
-static void
-draw_mesh_transform(g_mesh mesh, mat4 model) {
-    graphics_set_transform(model);
-    graphics_draw_mesh(&mesh);
-}
 
 typedef struct {
     vec3 pos;
@@ -42,140 +25,6 @@ typedef struct {
 } player_t;
 
 #define MAX_CUBES 1
-
-void
-generate_circle(vec3* circle, int segments, float radius) {
-    float angleStep = 2.0f * M_PI / segments;
-    for (int i = 0; i < segments; ++i) {
-        float angle = i * angleStep;
-        circle[i][0] = cosf(angle) * radius;
-        circle[i][1] = sinf(angle) * radius;
-        circle[i][2] = 0.0f; // Circle lies in the XY plane
-    }
-}
-
-g_mesh
-generate_tunnel(int segments, int length, float radius) {
-    vec3* circle = (vec3*)malloc(segments * sizeof(vec3));
-    generate_circle(circle, segments, radius);
-
-    g_mesh mesh;
-    mesh.num_v = segments * length;
-    mesh.num_i = segments * (length - 1) * 6;
-    mesh.vertices = (g_vertex*)malloc(mesh.num_v * sizeof(g_vertex));
-    mesh.indices = (unsigned int*)malloc(mesh.num_i * sizeof(unsigned int));
-    mesh.num_t = 1;
-    mesh.textures = (g_texture*)malloc(mesh.num_t * sizeof(g_texture));
-    mesh.textures[0] = graphics_load_texture("assets/marble2.jpg");
-    int vertexCount = 0;
-    int indexCount = 0;
-
-    for (int i = 0; i < length; ++i) {
-        for (int j = 0; j < segments; ++j) {
-            vec3 position;
-            glm_vec3_copy(circle[j], position);
-            position[2] = (float)i; // Move circle along Z axis
-
-            glm_vec3_copy(position, mesh.vertices[vertexCount].position);
-            glm_vec3_normalize_to(position, mesh.vertices[vertexCount].normal);
-            mesh.vertices[vertexCount].uv[0] = (float)j / segments;
-            mesh.vertices[vertexCount].uv[1] = (float)i / length;
-
-            if (i < length - 1) {
-                int nextSegment = (j + 1) % segments;
-                int currentIndex = i * segments + j;
-                int nextIndex = currentIndex + segments;
-                int nextSegmentIndex = i * segments + nextSegment;
-                int nextSegmentNextIndex = nextSegmentIndex + segments;
-
-                // First triangle
-                mesh.indices[indexCount++] = currentIndex;
-                mesh.indices[indexCount++] = nextIndex;
-                mesh.indices[indexCount++] = nextSegmentNextIndex;
-
-                // Second triangle
-                mesh.indices[indexCount++] = currentIndex;
-                mesh.indices[indexCount++] = nextSegmentNextIndex;
-                mesh.indices[indexCount++] = nextSegmentIndex;
-            }
-            vertexCount++;
-        }
-    }
-
-    free(circle);
-    graphics_create_gl_buffer(&mesh);
-    return mesh;
-}
-
-g_mesh
-create_orb_mesh(float radius, int sectors, int stacks) {
-    int numVertices = (sectors + 1) * (stacks + 1);
-    int numIndices = sectors * stacks * 6;
-    g_vertex* vertices = malloc(sizeof(g_vertex) * numVertices);
-    unsigned int* indices = malloc(sizeof(unsigned int) * numIndices);
-
-    float x, y, z, xy;                           // vertex position
-    float nx, ny, nz, lengthInv = 1.0f / radius; // normal
-    float s, t;                                  // texCoord
-
-    float sectorStep = 2 * M_PI / sectors;
-    float stackStep = M_PI / stacks;
-    float sectorAngle, stackAngle;
-
-    int k = 0;
-    for (int i = 0; i <= stacks; ++i) {
-        stackAngle = M_PI / 2 - i * stackStep; // starting from pi/2 to -pi/2
-        xy = radius * cosf(stackAngle);        // r * cos(u)
-        z = radius * sinf(stackAngle);         // r * sin(u)
-
-        for (int j = 0; j <= sectors; ++j, ++k) {
-            sectorAngle = j * sectorStep; // starting from 0 to 2pi
-
-            // vertex position (x, y, z)
-            x = xy * cosf(sectorAngle); // r * cos(u) * cos(v)
-            y = xy * sinf(sectorAngle); // r * cos(u) * sin(v)
-            glm_vec3_copy((vec3){x, y, z}, vertices[k].position);
-
-            // normalized vertex normal (nx, ny, nz)
-            nx = x * lengthInv;
-            ny = y * lengthInv;
-            nz = z * lengthInv;
-            glm_vec3_copy((vec3){nx, ny, nz}, vertices[k].normal);
-
-            // vertex tex coord (s, t) range between [0, 1]
-            s = (float)j / sectors;
-            t = (float)i / stacks;
-            glm_vec2_copy((vec2){s, t}, vertices[k].uv);
-        }
-    }
-
-    int index = 0;
-    for (int i = 0; i < stacks; ++i) {
-        int k1 = i * (sectors + 1); // beginning of current stack
-        int k2 = k1 + sectors + 1;  // beginning of next stack
-
-        for (int j = 0; j < sectors; ++j, ++index) {
-            if (i != 0) {
-                indices[index++] = k1 + j;
-                indices[index++] = k2 + j;
-                indices[index++] = k1 + j + 1;
-            }
-
-            if (i != (stacks - 1)) {
-                indices[index++] = k1 + j + 1;
-                indices[index++] = k2 + j;
-                indices[index++] = k2 + j + 1;
-            }
-        }
-    }
-
-    g_mesh orbMesh = graphics_create_mesh(numVertices, numIndices, 0, vertices, indices, nullptr);
-
-    free(vertices);
-    free(indices);
-
-    return orbMesh;
-}
 
 char front_log[100] = {0};
 char rot_log[100] = {0};
@@ -200,15 +49,12 @@ player_move(g_entity e, vec3 mouse_pos, vec3 input_axis, float speed, float sens
     g_pos->position[2] += scale * dir[1];
     g_rotation->rotation[1] += sensitivity * mouse_pos[0];
     g_rotation->rotation[0] += sensitivity * mouse_pos[1];
-
-    // g_rotation->rotation[1] = glm_clamp(g_rotation->rotation[1], 0,360);
-    //g_rotation->rotation[0] = glm_clamp(g_rotation->rotation[0], 0,45);
     g_rotation->rotation[2] = 0;
+
     world_reset_entity(e);
     world_translate_entity(e, g_pos->position);
     world_rotate_entity(e, g_rotation->rotation[1], (vec3){0, 1, 0});
     world_rotate_entity(e, g_rotation->rotation[0], (vec3){1, 0, 0});
-    //    world_transform_entity(e, g_pos->position, g_scale->scale, g_rotation->rotation);
 }
 
 g_position
@@ -244,7 +90,7 @@ main(void) {
     world_add_mesh(terrain, &mesh_terrain);
 
     //    auto cube = world_create_entity("cube", (vec3){50, 0.5f, 50}, (vec3){1, 1, 2},  (vec3){0, 0, 0}, terrain.entity);
-    auto player = world_create_entity("player", (vec3){50, 0.5f, 50}, (vec3){1.0f, 1.0f, 1.0f}, (vec3){0, 0, 0}, world);
+    g_entity player = world_create_entity("player", (vec3){50, 0.5f, 50}, (vec3){1.0f, 1.0f, 1.0f}, (vec3){0, 0, 0}, world);
     auto e_camera = world_create_entity("camera", (vec3){0, 10, -10}, (vec3){1.0f, 1.0f, 1.0f}, (vec3){30, -180, 0},
                                         player.entity);
 
@@ -274,15 +120,15 @@ main(void) {
         world_get_world_transform(e_camera, &model);
         glm_mat4_inv(*model, camera.view);
 
+
+
         graphics_begin();
         graphics_use_shader(&light_shader);
-
         graphics_use_camera(&camera);
         world_draw();
+
         gui_begin();
-
         gui_draw_text(graphics_get_width() / 2, graphics_get_height() / 2, "+");
-
         gui_draw_text(10, 10, fps);
         gui_draw_text(10, 50, front_log);
         gui_draw_text(10, 90, rot_log);
@@ -294,8 +140,8 @@ main(void) {
         }
         gui_end();
         graphics_end();
-        frame_count++;
 
+        frame_count++;
         old_time = current_time;
     }
 

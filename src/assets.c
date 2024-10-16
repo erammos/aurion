@@ -24,7 +24,7 @@ read_file(const char* filename, size_t* size) {
     rewind(file);        // Go back to the beginning of the file
 
     // Allocate memory for the buffer
-    buffer = malloc(*size * sizeof(char));
+    buffer = malloc(*size * sizeof(char) + 1);
     if (buffer == nullptr) {
         perror("Error allocating memory");
         fclose(file);
@@ -39,6 +39,8 @@ read_file(const char* filename, size_t* size) {
         fclose(file);
         exit(1);
     }
+
+    buffer[*size] = '\0';
 
     fclose(file); // Close the file
     return buffer;

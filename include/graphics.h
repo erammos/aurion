@@ -51,7 +51,7 @@ g_mesh graphics_create_mesh(size_t num_vertices, size_t num_indices, size_t num_
                             g_texture* textures);
 int graphics_init(void* window);
 void graphics_destroy();
-int graphics_load_shaders(g_shader* shader, const char* vs_file, const char* fs_file);
+void graphics_load_shaders(g_shader* shader, const char* vs_file, const char* fs_file);
 void graphics_draw_mesh(g_mesh* mesh);
 void graphics_begin();
 void graphics_end();
