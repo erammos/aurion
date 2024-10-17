@@ -47,7 +47,7 @@ player_move(g_entity e, vec3 mouse_pos, vec3 input_axis, float speed, float sens
 
     g_pos->position[0] += scale * dir[0];
     g_pos->position[2] += scale * dir[1];
-    g_rotation->rotation[1] += sensitivity * mouse_pos[0];
+    g_rotation->rotation[1] -= sensitivity * mouse_pos[0];
     g_rotation->rotation[0] += sensitivity * mouse_pos[1];
     g_rotation->rotation[2] = 0;
 
@@ -55,17 +55,6 @@ player_move(g_entity e, vec3 mouse_pos, vec3 input_axis, float speed, float sens
     world_translate_entity(e, g_pos->position);
     world_rotate_entity(e, g_rotation->rotation[1], (vec3){0, 1, 0});
     world_rotate_entity(e, g_rotation->rotation[0], (vec3){1, 0, 0});
-}
-
-g_position
-get_global_position(g_entity e) {
-    g_position position;
-    mat4* model;
-    world_get_world_transform(e, &model);
-    mat4 r;
-    vec3 s;
-    glm_decompose(*model, position.position, r, s);
-    return position;
 }
 
 int
