@@ -118,7 +118,7 @@ graphics_init(void* window) {
     return 0;
 }
 
-static void 
+static void
 load_shader(GLuint* uiShader, GLenum ShaderType, const GLchar* p_cShader) {
     // Build and link the shader program
     *uiShader = glCreateShader(ShaderType);
@@ -134,7 +134,7 @@ load_shader(GLuint* uiShader, GLenum ShaderType, const GLchar* p_cShader) {
         glGetShaderInfoLog(*uiShader, 1024, &iErrorLength, p_cInfoLog);
         SDL_LogCritical(SDL_LOG_CATEGORY_APPLICATION, "Failed to compile shader: %s\n", p_cInfoLog);
         glDeleteShader(*uiShader);
-	exit(1);
+        exit(1);
     }
 }
 
@@ -143,13 +143,15 @@ graphics_set_transform(mat4 transform) {
     graphics_set_uniform_mat4("model", transform);
 }
 
-void
-graphics_load_shaders(g_shader* shader, const char* vs_file, const char* fs_file) {
+g_shader
+graphics_load_shaders(const char* vs_file, const char* fs_file) {
+
+    g_shader shader;
     size_t vs_size, fs_size = 0;
     auto vertex_shader = read_file(vs_file, &vs_size);
     auto fragment_shader = read_file(fs_file, &fs_size);
-    printf("%s\n\n",vertex_shader);
-    printf("%s\n",fragment_shader);
+    printf("%s\n\n", vertex_shader);
+    printf("%s\n", fragment_shader);
     GLuint vs_id = 0;
     load_shader(&vs_id, GL_VERTEX_SHADER, vertex_shader);
     GLuint fs_id = 0;
@@ -166,9 +168,10 @@ graphics_load_shaders(g_shader* shader, const char* vs_file, const char* fs_file
         glGetProgramInfoLog(program, 1024, &iErrorLength, p_cInfoLog);
         SDL_LogCritical(SDL_LOG_CATEGORY_APPLICATION, "Failed to link shaders: %s\n", p_cInfoLog);
         glDeleteProgram(program);
-	exit(1);
+        exit(1);
     }
-    shader->id = program;
+    shader.id = program;
+    return shader;
 }
 
 void
@@ -342,7 +345,8 @@ perlin_noise(float x, float y, int octaves, float lacunarity, float persistence)
     return total / maxValue;
 }
 
-g_mesh graphics_create_terrain(int terrain_width, int terrain_height) {
+g_mesh
+graphics_create_terrain(int terrain_width, int terrain_height) {
     g_texture texture = graphics_load_texture("assets/marble2.jpg");
 
     g_vertex vertices[terrain_width * terrain_height];

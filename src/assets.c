@@ -127,5 +127,7 @@ assets_load_obj(const char* path) {
             }
         }
     }
+    hmfree(hash);
+    fast_obj_destroy(fast_mesh);
     return mesh;
 }

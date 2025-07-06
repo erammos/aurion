@@ -18,7 +18,7 @@ src = files(
   'src' / 'graphics.c',
   'src' / 'assets.c',
       'src' / 'gui.c',
-      'src' / 'world.c',
+      'src' / 'ecs.c',
       'src' / 'input.c',
       'src' / 'camera.c'
 )
