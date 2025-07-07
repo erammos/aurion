@@ -83,28 +83,23 @@ main(void) {
 
     auto mesh_obj = graphics_load_obj("assets/test.obj");
     ecs_add_mesh(player, &mesh_obj);
-    bool running = true;
-    unsigned int old_time, current_time;
-    Uint32 start_time = SDL_GetTicks();
+    unsigned int prev_time = SDL_GetTicks();
 
-    current_time = SDL_GetTicks();
     vec3 input_axis = {};
     vec3 mouse_pos = {0};
-    int frame_count = 0;
-    char fps[10] = {0};
     g_camera camera = camera_create(graphics_get_width(), graphics_get_height());
     camera_update(&camera, (vec3){50, 1.0f, 50 - 5}, (vec3){0, 1, 0}, -180, 0);
-
+    bool running = true;
     while (running) {
-        current_time = SDL_GetTicks();
-        float delta = (float)(current_time - old_time) / 1000.0f;
+        Uint32 current_time = SDL_GetTicks();
+        float delta = (float)(current_time - prev_time) / 1000;
+        prev_time = current_time;
         running = input_update(input_axis, mouse_pos);
 
         player_move(player, mouse_pos, input_axis, 10, 0.5f, delta);
         ecs_run_update_system(delta);
 
-        mat4* model;
-        ecs_get_world_transform(e_camera, &model);
+        mat4* model = ecs_get_world_transform(e_camera);
         glm_mat4_inv(*model, camera.view);
 
 
@@ -116,20 +111,11 @@ main(void) {
 
         gui_begin();
         gui_draw_text(graphics_get_width() / 2, graphics_get_height() / 2, "+");
-        gui_draw_text(10, 10, fps);
         gui_draw_text(10, 50, front_log);
         gui_draw_text(10, 90, rot_log);
-        Uint32 current_time = SDL_GetTicks();
-        if (current_time - start_time >= 1000) {
-            sprintf(fps, "%d", frame_count);
-            frame_count = 0;
-            start_time = current_time;
-        }
+        gui_draw_fps();
         gui_end();
         graphics_end();
-
-        frame_count++;
-        old_time = current_time;
     }
 
     graphics_destroy();

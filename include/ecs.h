@@ -14,7 +14,7 @@ extern ecs_entity_t world;
 void ecs_init_systems();
 g_entity ecs_create_entity(const char* name, vec3 pos, vec3 scale, vec3 rotate, ecs_entity_t parent);
 void ecs_get_local_transform(g_entity e, mat4** out);
-void ecs_get_world_transform(g_entity e, mat4** out);
+mat4 * ecs_get_world_transform(g_entity e);
 void ecs_run_update_system(float dt);
 void ecs_add_mesh(g_entity e, g_mesh* m);
 void ecs_run_render_system();

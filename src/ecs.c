@@ -164,10 +164,10 @@ ecs_get_local_transform(g_entity e, mat4** out) {
     *out = &p->matrix;
 }
 
-void
-ecs_get_world_transform(g_entity e, mat4** out) {
+mat4 *
+ecs_get_world_transform(g_entity e) {
     auto p = ecs_get_mut_pair(ecs, e.entity, g_transform, World);
-    *out = &p->matrix;
+    return p->matrix;
 }
 
 g_position*
