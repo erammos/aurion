@@ -7,6 +7,8 @@
 #include "fast_obj.h"
 #define STB_DS_IMPLEMENTATION
 #include "stb_ds.h"
+#define CGLTF_IMPLEMENTATION
+#include "cgltf.h"
 
 char*
 read_file(const char* filename, size_t* size) {
@@ -76,7 +78,7 @@ assets_load_obj(const char* path) {
     hashmap* hash = NULL;
     g_mesh mesh;
 
-    mesh.num_v =  0;
+    mesh.num_v = 0;
     mesh.num_i = 0;
     mesh.num_t = fast_mesh->texture_count - 1;
     mesh.indices = NULL;
@@ -97,9 +99,8 @@ assets_load_obj(const char* path) {
 
                 fastObjIndex mi = fast_mesh->indices[grp->index_offset + mesh.num_i];
                 key_t key = {.p = mi.p, .n = mi.n, .t = mi.t};
-                auto vv = hmget(hash,key);
-                if(vv.index  > 0)
-                {
+                auto vv = hmget(hash, key);
+                if (vv.index > 0) {
                     arrput(mesh.indices, vv.index - 1);
                     mesh.num_i++;
                     continue;
@@ -119,7 +120,7 @@ assets_load_obj(const char* path) {
                     vertex.normal[2] = fast_mesh->normals[3 * mi.n + 2];
                 }
                 arrput(mesh.indices, mesh.num_v);
-                arrput(mesh.vertices,vertex);
+                arrput(mesh.vertices, vertex);
                 value_t value = {mesh.num_v + 1, vertex};
                 hmput(hash, key, value);
                 mesh.num_v++;
@@ -130,4 +131,9 @@ assets_load_obj(const char* path) {
     hmfree(hash);
     fast_obj_destroy(fast_mesh);
     return mesh;
+}
+
+g_mesh
+assets_load_gltf(const char* path) {
+
 }

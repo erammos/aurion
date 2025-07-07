@@ -81,7 +81,7 @@ main(void) {
     auto e_camera = ecs_create_entity("camera", (vec3){0, 10, -10}, (vec3){1.0f, 1.0f, 1.0f}, (vec3){30, -180, 0},
                                         player.entity);
 
-    auto mesh_obj = graphics_load_obj("assets/test.obj");
+    auto mesh_obj = graphics_load_obj("assets/sphere.obj");
     ecs_add_mesh(player, &mesh_obj);
     unsigned int prev_time = SDL_GetTicks();
 
@@ -107,7 +107,7 @@ main(void) {
         graphics_begin();
         graphics_use_shader(&light_shader);
         graphics_use_camera(&camera);
-        graphics_set_light((vec3){0,10.0f,0}, (vec3){50,1.0f,50},0.8f,180.0f);
+        graphics_set_light((vec3){-1.0f,10.0f,0}, camera.pos,0.8f,180.0f);
         ecs_run_render_system();
 
         gui_begin();
