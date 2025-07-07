@@ -54,6 +54,19 @@ void
 gui_input(SDL_Event event) {
     nk_sdl_handle_event(&event);
 }
+static int frame_count = {};
+static Uint32 start_time = {};
+char fps[10] = {};
+void
+gui_draw_fps() {
+    if (SDL_GetTicks() - start_time >= 1000) {
+        snprintf(fps, 10,"%d", frame_count);
+        frame_count = 0;
+        start_time  += 1000;
+    }
+    frame_count++;
+    gui_draw_text(10, 10, fps);
+}
 
 void
 gui_begin() {

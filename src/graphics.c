@@ -321,9 +321,11 @@ graphics_load_obj(const char* path) {
 }
 
 void
-graphics_set_light(vec3 pos, vec3 viewPos) {
+graphics_set_light(vec3 pos, vec3 viewPos, float ambient,float specular) {
     graphics_set_uniform_vec3("lightPos", pos);
     graphics_set_uniform_vec3("viewPos", viewPos);
+    graphics_set_uniform_float("amb_coeff", ambient);
+    graphics_set_uniform_float("spec_coeff", specular);
 }
 
 static float

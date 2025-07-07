@@ -9,12 +9,13 @@ in VS_OUT {
 uniform sampler2D texture_diffuse1;
 uniform vec3 lightPos;
 uniform vec3 viewPos;
-
+uniform float spec_coeff;
+uniform float amb_coeff;
 void main()
-{           
+{
     vec3 color = texture(texture_diffuse1, fs_in.TexCoords).rgb;
     // ambient
-    vec3 ambient = 0.8 * color;
+    vec3 ambient = amb_coeff * color;
     // diffuse
     vec3 lightDir = normalize(lightPos - fs_in.FragPos);
     vec3 normal = normalize(fs_in.Normal);
@@ -24,9 +25,9 @@ void main()
     vec3 viewDir = normalize(viewPos - fs_in.FragPos);
     vec3 reflectDir = reflect(-lightDir, normal);
     float spec = 0.0;
-    vec3 halfwayDir = normalize(lightDir + viewDir);  
-    spec = pow(max(dot(normal, halfwayDir), 0.0), 150.0);
-  
-    vec3 specular = vec3(0.3) * spec; // assuming bright white light color
+    vec3 halfwayDir = normalize(lightDir + viewDir);
+    spec = pow(max(dot(normal, halfwayDir), 0.0), spec_coeff);
+
+    vec3 specular = vec3(0.9) * spec; // assuming bright white light color
     FragColor = vec4(ambient + diffuse + specular, 1.0);
 }
