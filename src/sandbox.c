@@ -3,6 +3,8 @@
 #include <graphics.h>
 #include <stdio.h>
 #include <stdlib.h>
+
+#include "assets.h"
 #include "camera.h"
 #include "cglm/affine-pre.h"
 #include "cglm/affine.h"
@@ -81,7 +83,8 @@ main(void) {
     auto e_camera = ecs_create_entity("camera", (vec3){0, 10, -10}, (vec3){1.0f, 1.0f, 1.0f}, (vec3){30, -180, 0},
                                         player.entity);
 
-    auto mesh_obj = graphics_load_obj("assets/sphere.obj");
+  //  auto mesh_obj = graphics_load_obj("assets/sphere.obj");
+    auto mesh_obj = graphics_load_obj("assets/sphere.gltf");
     ecs_add_mesh(player, &mesh_obj);
     unsigned int prev_time = SDL_GetTicks();
 

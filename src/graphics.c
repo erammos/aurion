@@ -315,7 +315,20 @@ graphics_load_texture(const char* path) {
 
 g_mesh
 graphics_load_obj(const char* path) {
-    g_mesh mesh = assets_load_obj(path);
+    const char* dot = strrchr(path, '.');
+
+    g_mesh mesh;
+    // Ensure a dot was found and it's not the first character (e.g., ".bashrc")
+    if (dot && dot != path) {
+        // Compare the substring after the dot with our known extensions
+        if (strcmp(dot, ".obj") == 0) {
+            mesh = assets_load_obj(path);
+
+        }
+        if (strcmp(dot, ".gltf") == 0) {
+            mesh = assets_load_gltf(path);
+        }
+    }
     graphics_create_gl_buffer(&mesh);
     return mesh;
 }
