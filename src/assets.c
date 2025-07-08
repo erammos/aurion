@@ -133,7 +133,99 @@ assets_load_obj(const char* path) {
     return mesh;
 }
 
-g_mesh
-assets_load_gltf(const char* path) {
+g_mesh assets_load_gltf(const char* path) {
+    g_mesh mesh = {};
+    cgltf_options options = {0};
+    cgltf_data* data = NULL;
 
+    // 1. Parse the file structure
+    cgltf_result result = cgltf_parse_file(&options, path, &data);
+    if (result != cgltf_result_success) {
+        fprintf(stderr, "ERROR: Failed to parse GLTF file: %s\n", path);
+        return mesh;
+    }
+
+    // 2. Load the binary data from .bin files or data URIs
+    result = cgltf_load_buffers(&options, data, path);
+    if (result != cgltf_result_success) {
+        fprintf(stderr, "ERROR: Failed to load GLTF buffers for: %s\n", path);
+        cgltf_free(data);
+        return mesh;
+    }
+
+    // --- Now you can safely process the loaded data ---
+
+    cgltf_mesh* gltf_mesh = &data->meshes[0];
+    cgltf_primitive* primitive = &gltf_mesh->primitives[0];
+
+    // --- Vertex Data Loading (Restored) ---
+    mesh.num_v = primitive->attributes[0].data->count;
+    mesh.vertices = (g_vertex*)malloc(mesh.num_v * sizeof(g_vertex));
+    for (size_t i = 0; i < mesh.num_v; ++i) {
+        // Find and copy position data
+        cgltf_accessor* pos_accessor = NULL;
+        for (size_t j = 0; j < primitive->attributes_count; ++j) {
+            if (primitive->attributes[j].type == cgltf_attribute_type_position) {
+                pos_accessor = primitive->attributes[j].data;
+                break;
+            }
+        }
+        if (pos_accessor) {
+            cgltf_accessor_read_float(pos_accessor, i, mesh.vertices[i].position, 3);
+        }
+
+        // Find and copy normal data
+        cgltf_accessor* normal_accessor = NULL;
+        for (size_t j = 0; j < primitive->attributes_count; ++j) {
+            if (primitive->attributes[j].type == cgltf_attribute_type_normal) {
+                normal_accessor = primitive->attributes[j].data;
+                break;
+            }
+        }
+        if (normal_accessor) {
+            cgltf_accessor_read_float(normal_accessor, i, mesh.vertices[i].normal, 3);
+        }
+
+        // Find and copy texture coordinate data
+        cgltf_accessor* tex_coord_accessor = NULL;
+        for (size_t j = 0; j < primitive->attributes_count; ++j) {
+            if (primitive->attributes[j].type == cgltf_attribute_type_texcoord) {
+                tex_coord_accessor = primitive->attributes[j].data;
+                break;
+            }
+        }
+        if (tex_coord_accessor) {
+            cgltf_accessor_read_float(tex_coord_accessor, i, mesh.vertices[i].uv, 2);
+        }
+    }
+
+    // --- Index Data Loading (with fixes) ---
+    if (primitive->indices != NULL) {
+        mesh.num_i = primitive->indices->count;
+        mesh.indices = (unsigned int*)malloc(mesh.num_i * sizeof(unsigned int));
+        for (size_t i = 0; i < mesh.num_i; ++i) {
+            mesh.indices[i] = (unsigned int)cgltf_accessor_read_index(primitive->indices, i);
+        }
+    } else {
+        mesh.num_i = 0;
+        mesh.indices = NULL;
+    }
+
+    // --- Texture Loading Logic ---
+    if (primitive->material && primitive->material->has_pbr_metallic_roughness) {
+        cgltf_texture_view* tex_view = &primitive->material->pbr_metallic_roughness.base_color_texture;
+        if (tex_view->texture && tex_view->texture->image) {
+            const char* image_uri = tex_view->texture->image->uri;
+            if (image_uri) {
+                char full_path[1024];
+                snprintf(full_path, sizeof(full_path), "assets/%s", image_uri);
+                graphics_load_texture(full_path);
+            }
+        }
+    }
+
+    // ... (Your OpenGL VAO/VBO/EBO generation code would go here) ...
+
+    cgltf_free(data);
+    return mesh;
 }
