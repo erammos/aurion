@@ -323,7 +323,6 @@ graphics_load_obj(const char* path) {
         // Compare the substring after the dot with our known extensions
         if (strcmp(dot, ".obj") == 0) {
             mesh = assets_load_obj(path);
-
         }
         if (strcmp(dot, ".gltf") == 0) {
             mesh = assets_load_gltf(path);
@@ -333,12 +332,13 @@ graphics_load_obj(const char* path) {
     return mesh;
 }
 
+
 void
-graphics_set_light(vec3 pos, vec3 viewPos, float ambient,float specular) {
+graphics_set_light(vec3 pos, vec3 viewPos, vec3 lightColor) {
     graphics_set_uniform_vec3("lightPos", pos);
     graphics_set_uniform_vec3("viewPos", viewPos);
-    graphics_set_uniform_float("amb_coeff", ambient);
-    graphics_set_uniform_float("spec_coeff", specular);
+    graphics_set_uniform_vec3("lightColor",lightColor);
+    graphics_set_uniform_int("gamma",1);
 }
 
 static float

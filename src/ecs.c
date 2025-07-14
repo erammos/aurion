@@ -176,6 +176,15 @@ ecs_get_position(g_entity e) {
     return p;
 }
 
+g_position
+ecs_get_world_position(g_entity e) {
+    auto p = ecs_get_mut(ecs, e.entity, g_position);
+    auto  transform = ecs_get_world_transform(e);
+    g_position out = {0};
+    glm_mat4_mulv3(*transform, p->position,1,out.position) ;
+    return out;
+}
+
 g_rotation*
 ecs_get_rotation(g_entity e) {
     auto p = ecs_get_mut(ecs, e.entity, g_rotation);
