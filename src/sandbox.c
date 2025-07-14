@@ -34,21 +34,22 @@ char rot_log[100] = {0};
 void
 player_move(g_entity e, vec3 mouse_pos, vec3 input_axis, float speed, float sensitivity, float dt) {
 
-    mat4* matrix;
-    ecs_get_local_transform(e, &matrix);
 
     g_rotation* g_rotation = ecs_get_rotation(e);
     vec2 dir;
-    float scale = speed * dt * input_axis[1];
+    float scale_v = speed * dt * input_axis[1];
+    float scale_h = speed * dt * -input_axis[0];
     dir[0] = sin(glm_rad(g_rotation->rotation[1]));
     dir[1] = cos(glm_rad(g_rotation->rotation[1]));
-    sprintf(front_log, "%f %f", dir[0], dir[1]);
+    sprintf(front_log, "%f %f", input_axis[0], input_axis[1]);
     sprintf(rot_log, "%f %f %f", g_rotation->rotation[0], g_rotation->rotation[1], g_rotation->rotation[2]);
     g_position* g_pos = ecs_get_position(e);
     g_scale* g_scale = ecs_get_scale(e);
 
-    g_pos->position[0] += scale * dir[0];
-    g_pos->position[2] += scale * dir[1];
+    g_pos->position[0] += scale_v * dir[0];
+    g_pos->position[2] += scale_v * dir[1];
+    g_pos->position[0] += scale_h * dir[1];
+    g_pos->position[2] -= scale_h * dir[0];
     g_rotation->rotation[1] -= sensitivity * mouse_pos[0];
     g_rotation->rotation[0] += sensitivity * mouse_pos[1];
     g_rotation->rotation[2] = 0;
@@ -80,12 +81,15 @@ main(void) {
 
     //    auto cube = world_create_entity("cube", (vec3){50, 0.5f, 50}, (vec3){1, 1, 2},  (vec3){0, 0, 0}, terrain.entity);
     g_entity player = ecs_create_entity("player", (vec3){50, 0.5f, 50}, (vec3){1.0f, 1.0f, 1.0f}, (vec3){0, 0, 0}, world);
-    auto e_camera = ecs_create_entity("camera", (vec3){0, 10, -10}, (vec3){1.0f, 1.0f, 1.0f}, (vec3){30, -180, 0},
+    auto e_camera = ecs_create_entity("camera", (vec3){0, 10, -20}, (vec3){1.0f, 1.0f, 1.0f}, (vec3){30, -180, 0},
                                         player.entity);
 
   //  auto mesh_obj = graphics_load_obj("assets/sphere.obj");
-    auto mesh_obj = graphics_load_obj("assets/sphere.gltf");
+    auto mesh_obj = graphics_load_obj("assets/sphere.obj");
     ecs_add_mesh(player, &mesh_obj);
+    g_entity light_origin = ecs_create_entity("origin", (vec3){0.0f, 0.0f, 0}, (vec3){1.0f, 1.0f, 1.0f}, (vec3){0, 0, 0}, player.entity);
+    g_entity light = ecs_create_entity("light", (vec3){0, 0.5f, 5}, (vec3){1.0f, 1.0f, 1.0f}, (vec3){0, 0, 0}, light_origin.entity);
+    ecs_add_mesh(light, &mesh_obj);
     unsigned int prev_time = SDL_GetTicks();
 
     vec3 input_axis = {};
@@ -93,6 +97,7 @@ main(void) {
     g_camera camera = camera_create(graphics_get_width(), graphics_get_height());
     camera_update(&camera, (vec3){50, 1.0f, 50 - 5}, (vec3){0, 1, 0}, -180, 0);
     bool running = true;
+    float offset = 0.0f;
     while (running) {
         Uint32 current_time = SDL_GetTicks();
         float delta = (float)(current_time - prev_time) / 1000;
@@ -100,6 +105,10 @@ main(void) {
         running = input_update(input_axis, mouse_pos);
 
         player_move(player, mouse_pos, input_axis, 10, 0.5f, delta);
+        ecs_get_position(light_origin);
+        ecs_reset_entity(light_origin);
+        ecs_rotate_entity(light_origin,offset,(vec3) {0,1,0});
+        offset+=delta * 100.0f;
         ecs_run_update_system(delta);
 
         mat4* model = ecs_get_world_transform(e_camera);
@@ -107,10 +116,15 @@ main(void) {
 
 
 
+
         graphics_begin();
         graphics_use_shader(&light_shader);
         graphics_use_camera(&camera);
-        graphics_set_light((vec3){-1.0f,10.0f,0}, camera.pos,0.8f,180.0f);
+        auto pos = ecs_get_world_position(light);
+        auto player_pos = ecs_get_world_position(player);
+
+        printf("%f %f %f\n",player_pos.position[0],player_pos.position[1], player_pos.position[2]);
+        graphics_set_light(pos.position,player_pos.position,0.5f,300);
         ecs_run_render_system();
 
         gui_begin();

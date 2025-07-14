@@ -338,7 +338,8 @@ graphics_set_light(vec3 pos, vec3 viewPos, float ambient,float specular) {
     graphics_set_uniform_vec3("lightPos", pos);
     graphics_set_uniform_vec3("viewPos", viewPos);
     graphics_set_uniform_float("amb_coeff", ambient);
-    graphics_set_uniform_float("spec_coeff", specular);
+    graphics_set_uniform_float("shininess", specular);
+    graphics_set_uniform_vec3("lightColor",(vec3) {1.0,1.0,1.0});
 }
 
 static float
