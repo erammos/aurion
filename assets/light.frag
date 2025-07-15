@@ -11,38 +11,24 @@ uniform sampler2D texture_diffuse1;
 uniform vec3 lightPos;
 uniform vec3 lightColor;
 uniform vec3 viewPos;
-uniform bool gamma;
 
-vec3 BlinnPhong(vec3 normal, vec3 fragPos, vec3 lightPos, vec3 lightColor)
-{
-    // diffuse
-    vec3 lightDir = normalize(fragPos - lightPos);
-    float diff = max(dot(lightDir, normal), 0.0);
-    vec3 diffuse = diff * lightColor;
-    // specular
-    vec3 viewDir = normalize(viewPos - fragPos);
-    vec3 reflectDir = reflect(-lightDir, normal);
-    float spec = 0.0;
-    vec3 halfwayDir = normalize(lightDir + viewDir);
-    spec = pow(max(dot(normal, halfwayDir), 0.0), 1.0);
-    vec3 specular = spec * lightColor;
-    // simple attenuation
-    float max_distance = 10.0;
-    float distance = length(lightPos - fragPos);
-    float attenuation = 1.0 / (gamma ? distance * distance : distance);
-
-    diffuse *= attenuation;
-    specular *= attenuation;
-
-    return diffuse + specular + 0.01f;
-}
 
 void main()
 {
     vec3 color = texture(texture_diffuse1, fs_in.TexCoords).rgb;
-    vec3 lighting = BlinnPhong(normalize(fs_in.Normal), fs_in.FragPos, lightPos, lightColor);
-    color *= lighting;
-    if(gamma)
-        color = pow(color, vec3(1.0/2.2));
-    FragColor = vec4(color, 1.0);
+    float ambient_strength = 1.3f;
+    vec3 ambient_color = lightColor * ambient_strength;
+    vec3 normal = normalize(fs_in.Normal);
+    vec3 light_dir = normalize(lightPos - fs_in.FragPos);
+    float diffuse_strength = max(dot(normal, light_dir), 0.0);
+    vec3 diffuse_color = lightColor * diffuse_strength;
+
+    vec3 view_dir = normalize(viewPos -  fs_in.FragPos);
+    vec3 reflect_dir = reflect(-light_dir, normal);
+
+    float specular_strength = pow(max(dot(view_dir, reflect_dir), 0.0), 32);
+    vec3 specular_color = specular_strength * lightColor;
+    vec3 result = (ambient_color + diffuse_color + specular_color) * color.xyz;
+
+    FragColor = vec4(result, 1.0);
 }

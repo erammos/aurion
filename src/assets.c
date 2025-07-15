@@ -73,21 +73,22 @@ typedef struct {
 } hashmap;
 
 g_mesh
-assets_load_obj(const char* path) {
+assets_load_obj(const char* path,g_material* material) {
     fastObjMesh* fast_mesh = fast_obj_read(path);
     hashmap* hash = NULL;
     g_mesh mesh;
 
+
     mesh.num_v = 0;
     mesh.num_i = 0;
-    mesh.num_t = fast_mesh->texture_count - 1;
+    material->num_t = fast_mesh->texture_count - 1;
     mesh.indices = NULL;
     mesh.vertices = NULL;
-    mesh.textures = malloc(sizeof(g_texture) * mesh.num_t);
+    material->textures = malloc(sizeof(g_texture) * material->num_t);
 
     auto p = fast_mesh->textures[1];
     g_texture texture = graphics_load_texture(p.path);
-    mesh.textures[0] = texture;
+    material->textures[0] = texture;
 
     for (int gi = 0; gi < fast_mesh->group_count; gi++) {
         fastObjGroup* grp = &fast_mesh->groups[gi];
@@ -133,7 +134,7 @@ assets_load_obj(const char* path) {
     return mesh;
 }
 
-g_mesh assets_load_gltf(const char* path) {
+g_mesh assets_load_gltf(const char* path,g_material* material) {
     g_mesh mesh = {};
     cgltf_options options = {0};
     cgltf_data* data = NULL;
@@ -219,7 +220,9 @@ g_mesh assets_load_gltf(const char* path) {
             if (image_uri) {
                 char full_path[1024];
                 snprintf(full_path, sizeof(full_path), "assets/%s", image_uri);
-                graphics_load_texture(full_path);
+                g_texture texture = graphics_load_texture(full_path);
+                material->num_t = 1;
+                material->textures[0] = texture;
             }
         }
     }

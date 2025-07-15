@@ -30,9 +30,72 @@ typedef struct {
 
 char front_log[100] = {0};
 char rot_log[100] = {0};
+// // Add this helper function somewhere in your code.
+// // It calculates the height of a point (p) within a triangle (a, b, c)
+// float barycentric_height(vec3 p, vec3 a, vec3 b, vec3 c) {
+//     vec3 v0 = {b[0] - a[0], 0, b[2] - a[2]};
+//     vec3 v1 = {c[0] - a[0], 0, c[2] - a[2]};
+//     vec3 v2 = {p[0] - a[0], 0, p[2] - a[2]};
+//
+//     float d00 = glm_vec3_dot(v0, v0);
+//     float d01 = glm_vec3_dot(v0, v1);
+//     float d11 = glm_vec3_dot(v1, v1);
+//     float d20 = glm_vec3_dot(v2, v0);
+//     float d21 = glm_vec3_dot(v2, v1);
+//
+//     float denom = d00 * d11 - d01 * d01;
+//     if (fabs(denom) < 1e-5) { // Avoid division by zero
+//         return a[1];
+//     }
+//
+//     float v = (d11 * d20 - d01 * d21) / denom;
+//     float w = (d00 * d21 - d01 * d20) / denom;
+//     float u = 1.0f - v - w;
+//
+//     // Use the weights u, v, w to interpolate the Y-values (height)
+//     return u * a[1] + v * b[1] + w * c[1];
+// }
 
+// Gets the height on the terrain mesh at world coordinates (x, z)
+float get_height_on_terrain(float x, float z, g_mesh terrain) {
+    int terrain_width = 100; // Must match the width used in graphics_create_terrain
+    int terrain_depth = 100; // Must match the depth used in graphics_create_terrain
+
+    // Find the integer grid coordinates by truncating the floats
+    int grid_x = (int)x;
+    int grid_z = (int)z;
+
+    // --- Boundary Check ---
+    // Ensure the player is within the valid bounds of the terrain grid.
+    if (grid_x < 0 || grid_x >= terrain_width - 1 || grid_z < 0 || grid_z >= terrain_depth - 1) {
+        return 0.0f; // Return a default height if outside the terrain
+    }
+
+    // --- Fractional Coordinates ---
+    // Calculate how far the player is across the grid cell (from 0.0 to 1.0)
+    float frac_x = x - grid_x;
+    float frac_z = z - grid_z;
+
+    // --- Get the Four Corner Vertices ---
+    // Get the vertices of the quad the player is standing on.
+    g_vertex v00 = terrain.vertices[grid_z * terrain_width + grid_x];           // Top-Left
+    g_vertex v10 = terrain.vertices[grid_z * terrain_width + (grid_x + 1)];     // Top-Right
+    g_vertex v01 = terrain.vertices[(grid_z + 1) * terrain_width + grid_x];     // Bottom-Left
+    g_vertex v11 = terrain.vertices[(grid_z + 1) * terrain_width + (grid_x + 1)]; // Bottom-Right
+
+    // --- Interpolation ---
+    // 1. Interpolate in the X direction for both the top and bottom edges of the quad.
+    //    We use glm_lerp to blend between the two heights.
+    float height_top = glm_lerp(v00.position[1], v10.position[1], frac_x);
+    float height_bottom = glm_lerp(v01.position[1], v11.position[1], frac_x);
+
+    // 2. Interpolate in the Z direction between the two previously calculated heights.
+    float final_height = glm_lerp(height_top, height_bottom, frac_z);
+
+    return final_height;
+}
 void
-player_move(g_entity e, vec3 mouse_pos, vec3 input_axis, float speed, float sensitivity, float dt) {
+player_move(g_entity e, vec3 mouse_pos, vec3 input_axis, float speed, float sensitivity, float dt, g_mesh mesh_terrain) {
 
 
     g_rotation* g_rotation = ecs_get_rotation(e);
@@ -50,6 +113,8 @@ player_move(g_entity e, vec3 mouse_pos, vec3 input_axis, float speed, float sens
     g_pos->position[2] += scale_v * dir[1];
     g_pos->position[0] += scale_h * dir[1];
     g_pos->position[2] -= scale_h * dir[0];
+    g_pos->position[1] = get_height_on_terrain(g_pos->position[0], g_pos->position[2], mesh_terrain);
+
     g_rotation->rotation[1] -= sensitivity * mouse_pos[0];
     g_rotation->rotation[0] += sensitivity * mouse_pos[1];
     g_rotation->rotation[2] = 0;
@@ -77,19 +142,28 @@ main(void) {
 
     auto mesh_terrain = graphics_create_terrain(100, 100);
     auto terrain = ecs_create_entity("terrain", (vec3){0, 0, 0}, (vec3){1, 1, 1}, (vec3){0, 0, 0}, world);
+    auto terrain_material = graphics_create_material("assets/marble2.jpg",light_shader);
     ecs_add_mesh(terrain, &mesh_terrain);
+    ecs_add_material(terrain,&terrain_material);
 
     //    auto cube = world_create_entity("cube", (vec3){50, 0.5f, 50}, (vec3){1, 1, 2},  (vec3){0, 0, 0}, terrain.entity);
-    g_entity player = ecs_create_entity("player", (vec3){50, 0.5f, 50}, (vec3){1.0f, 1.0f, 1.0f}, (vec3){0, 0, 0}, world);
+    g_entity player = ecs_create_entity("player", (vec3){0, 0, 0}, (vec3){1.0f, 1.0f, 1.0f}, (vec3){0, 0, 0}, world);
     auto e_camera = ecs_create_entity("camera", (vec3){0, 10, -20}, (vec3){1.0f, 1.0f, 1.0f}, (vec3){30, -180, 0},
                                         player.entity);
 
   //  auto mesh_obj = graphics_load_obj("assets/sphere.obj");
-    auto mesh_obj = graphics_load_obj("assets/test.obj");
+    g_material player_material;
+    auto mesh_obj = graphics_load_obj("assets/sphere.obj", &player_material);
+    player_material.shader = light_shader;
     ecs_add_mesh(player, &mesh_obj);
+    ecs_add_material(player,&player_material);
+
     g_entity light_origin = ecs_create_entity("origin", (vec3){0.0f, 0.0f, 0}, (vec3){1.0f, 1.0f, 1.0f}, (vec3){0, 0, 0}, player.entity);
-    g_entity light = ecs_create_entity("light", (vec3){0, 2.0f, 10}, (vec3){1.0f, 1.0f, 1.0f}, (vec3){0, 0, 0}, light_origin.entity);
+    g_entity light = ecs_create_entity("light", (vec3){0, 3.0f, 10}, (vec3){1.0f, 1.0f, 1.0f}, (vec3){0, 0, 0}, light_origin.entity);
+    g_material orb_material  = graphics_create_material("assets/marble2.jpg",orb_shader);
     ecs_add_mesh(light, &mesh_obj);
+    ecs_add_material(light, &orb_material);
+
     unsigned int prev_time = SDL_GetTicks();
 
     vec3 input_axis = {};
@@ -104,7 +178,7 @@ main(void) {
         prev_time = current_time;
         running = input_update(input_axis, mouse_pos);
 
-        player_move(player, mouse_pos, input_axis, 10, 0.5f, delta);
+        player_move(player, mouse_pos, input_axis, 10, 0.5f, delta, mesh_terrain);
         ecs_get_position(light_origin);
         ecs_reset_entity(light_origin);
         ecs_rotate_entity(light_origin,offset,(vec3) {0,1,0});
@@ -118,12 +192,12 @@ main(void) {
 
 
         graphics_begin();
-        graphics_use_shader(&light_shader);
-        graphics_use_camera(&camera);
+        graphics_use_shader(&player_material.shader);
         auto pos = ecs_get_world_position(light);
         auto player_pos = ecs_get_world_position(e_camera);
-
         graphics_set_light(pos.position,player_pos.position,(vec3){1,1,1});;
+        graphics_use_camera(&camera);
+
         ecs_run_render_system();
 
         gui_begin();

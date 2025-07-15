@@ -28,4 +28,5 @@ void ecs_scale_entity(g_entity e, vec3 scale);
 void ecs_rotate_entity(g_entity e, float angle, vec3 axis);
 void ecs_reset_entity(g_entity e);
 g_position ecs_get_world_position(g_entity e);
+void ecs_add_material(g_entity e, g_material * m);
 #endif

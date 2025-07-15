@@ -16,6 +16,7 @@ ECS_COMPONENT_DECLARE(g_position);
 ECS_COMPONENT_DECLARE(g_rotation);
 ECS_COMPONENT_DECLARE(g_scale);
 ECS_COMPONENT_DECLARE(g_mesh);
+ECS_COMPONENT_DECLARE(g_material);
 ECS_TAG_DECLARE(World);
 ECS_TAG_DECLARE(Local);
 ecs_entity_t world;
@@ -43,10 +44,13 @@ void
 render(ecs_iter_t* it) {
     g_transform* model = ecs_field(it, g_transform, 0);
     g_mesh* mesh = ecs_field(it, g_mesh, 1);
+    g_material * material= ecs_field(it, g_material, 2);
+
 
     for (int i = 0; i < it->count; i++) {
+        graphics_use_shader(&material->shader);
         graphics_set_transform(model[i].matrix);
-        graphics_draw_mesh(&mesh[i]);
+        graphics_draw_mesh(&mesh[i],&material[i]);
     }
 }
 
@@ -58,6 +62,8 @@ ecs_init_systems() {
     ECS_COMPONENT_DEFINE(ecs, g_position);
     ECS_COMPONENT_DEFINE(ecs, g_rotation);
     ECS_COMPONENT_DEFINE(ecs, g_scale);
+    ECS_COMPONENT_DEFINE(ecs, g_material);
+
 
     ECS_TAG_DEFINE(ecs, World);
     ECS_TAG_DEFINE(ecs, Local);
@@ -85,6 +91,7 @@ ecs_init_systems() {
                   {
                       {.id = ecs_pair(ecs_id(g_transform), World), .inout = EcsIn},
                       {.id = ecs_id(g_mesh), .inout = EcsIn},
+                      {.id = ecs_id(g_material), .inout = EcsIn}
                   },
               .callback = render});
     world = ecs_entity(ecs, {.name = "root"});
@@ -156,6 +163,10 @@ void
 ecs_add_mesh(g_entity e, g_mesh* m) {
     // ecs_add(ecs, e.entity, g_mesh);
     ecs_set_ptr(ecs, e.entity, g_mesh, m);
+}
+void
+ecs_add_material(g_entity e, g_material * m) {
+    ecs_set_ptr(ecs, e.entity, g_material, m);
 }
 
 void

@@ -205,36 +205,32 @@ graphics_create_gl_buffer(g_mesh* mesh) {
 }
 
 g_mesh
-graphics_create_mesh(size_t num_vertices, size_t num_indices, size_t num_textures,
-                     g_vertex vertices[static num_vertices], unsigned int indices[static num_indices],
-                     g_texture* textures) {
+graphics_create_mesh(size_t num_vertices, size_t num_indices,
+                     g_vertex vertices[static num_vertices], unsigned int indices[static num_indices]
+                     ) {
     g_mesh mesh = {
 
-        .num_i = num_indices, .num_v = num_vertices, .num_t = num_textures};
+        .num_i = num_indices, .num_v = num_vertices};
 
     mesh.vertices = calloc(num_vertices, sizeof(g_vertex));
     memcpy(mesh.vertices, vertices, sizeof(g_vertex) * num_vertices);
     mesh.indices = calloc(num_indices, sizeof(unsigned int));
     memcpy(mesh.indices, indices, sizeof(unsigned int) * num_indices);
 
-    if (textures != nullptr && num_textures > 0) {
-        mesh.textures = calloc(num_textures, sizeof(g_texture));
-        memcpy(mesh.textures, textures, sizeof(g_texture) * num_textures);
-    }
     graphics_create_gl_buffer(&mesh);
 
     return mesh;
 }
 
 void
-graphics_draw_mesh(g_mesh* mesh) {
+graphics_draw_mesh(g_mesh* mesh, g_material *material) {
     unsigned int diffuseNr = 1;
     unsigned int specularNr = 1;
-    for (unsigned int i = 0; i < mesh->num_t; i++) {
+    for (unsigned int i = 0; i < material->num_t; i++) {
         glActiveTexture(GL_TEXTURE0 + i);
         char number[2] = {[1] = '\0'};
         char name[30] = {};
-        strcpy(name, mesh->textures[i].type);
+        strcpy(name, material->textures[i].type);
         if (strcmp(name, "texture_diffuse") == 0) {
             number[0] = '0' + diffuseNr++;
         } else if (strcmp(name, "texture_specular") == 0) {
@@ -243,7 +239,7 @@ graphics_draw_mesh(g_mesh* mesh) {
 
         strcat(name, number);
         graphics_set_uniform_int(name, i);
-        GL_CHECK(glBindTexture(GL_TEXTURE_2D, mesh->textures[i].id));
+        GL_CHECK(glBindTexture(GL_TEXTURE_2D, material->textures[i].id));
     }
     GL_CHECK(glActiveTexture(GL_TEXTURE0));
 
@@ -314,7 +310,7 @@ graphics_load_texture(const char* path) {
 }
 
 g_mesh
-graphics_load_obj(const char* path) {
+graphics_load_obj(const char* path, g_material* material) {
     const char* dot = strrchr(path, '.');
 
     g_mesh mesh;
@@ -322,10 +318,10 @@ graphics_load_obj(const char* path) {
     if (dot && dot != path) {
         // Compare the substring after the dot with our known extensions
         if (strcmp(dot, ".obj") == 0) {
-            mesh = assets_load_obj(path);
+            mesh = assets_load_obj(path, material);
         }
         if (strcmp(dot, ".gltf") == 0) {
-            mesh = assets_load_gltf(path);
+            mesh = assets_load_gltf(path, material);
         }
     }
     graphics_create_gl_buffer(&mesh);
@@ -338,7 +334,6 @@ graphics_set_light(vec3 pos, vec3 viewPos, vec3 lightColor) {
     graphics_set_uniform_vec3("lightPos", pos);
     graphics_set_uniform_vec3("viewPos", viewPos);
     graphics_set_uniform_vec3("lightColor",lightColor);
-    graphics_set_uniform_int("gamma",1);
 }
 
 static float
@@ -362,15 +357,14 @@ perlin_noise(float x, float y, int octaves, float lacunarity, float persistence)
 
 g_mesh
 graphics_create_terrain(int terrain_width, int terrain_height) {
-    g_texture texture = graphics_load_texture("assets/marble2.jpg");
 
     g_vertex vertices[terrain_width * terrain_height];
     unsigned int indices[(terrain_width - 1) * (terrain_height - 1) * 6];
 
-    float perlin_scale = 0.3f;
+    float perlin_scale = 0.01f;
     for (int y = 0; y < terrain_height; ++y) {
         for (int x = 0; x < terrain_width; ++x) {
-            float height = perlin_noise((float)x * perlin_scale, (float)y * perlin_scale, 6, 2.0f, 0.5f);
+            float height = 200.0f * perlin_noise((float)x * perlin_scale, (float)y * perlin_scale, 6, 0.9f, 1.5f);
             if (x > 10 && x < 40 && y > 10 && y < 40) {
                 height = 0;
             }
@@ -426,9 +420,8 @@ graphics_create_terrain(int terrain_width, int terrain_height) {
         }
     }
 
-    g_texture textures[1] = {texture};
     auto terrain_mesh = graphics_create_mesh(
-        terrain_width * terrain_height, (terrain_width - 1) * (terrain_height - 1) * 6, 1, vertices, indices, textures);
+        terrain_width * terrain_height, (terrain_width - 1) * (terrain_height - 1) * 6,vertices, indices);
     return terrain_mesh;
 }
 
@@ -443,6 +436,15 @@ generate_circle(vec3* circle, int segments, float radius) {
     }
 }
 
+
+g_material graphics_create_material(const char * texture_path,g_shader shader) {
+    g_material material;
+    material.num_t = 1;
+    material.textures = (g_texture*)malloc(material.num_t * sizeof(g_texture));
+    material.textures[0] = graphics_load_texture(texture_path);
+    material.shader = shader;
+    return material;
+}
 g_mesh
 graphics_generate_tunnel(int segments, int length, float radius) {
     vec3* circle = (vec3*)malloc(segments * sizeof(vec3));
@@ -453,9 +455,7 @@ graphics_generate_tunnel(int segments, int length, float radius) {
     mesh.num_i = segments * (length - 1) * 6;
     mesh.vertices = (g_vertex*)malloc(mesh.num_v * sizeof(g_vertex));
     mesh.indices = (unsigned int*)malloc(mesh.num_i * sizeof(unsigned int));
-    mesh.num_t = 1;
-    mesh.textures = (g_texture*)malloc(mesh.num_t * sizeof(g_texture));
-    mesh.textures[0] = graphics_load_texture("assets/marble2.jpg");
+
     int vertexCount = 0;
     int indexCount = 0;
 
@@ -558,7 +558,7 @@ create_orb_mesh(float radius, int sectors, int stacks) {
         }
     }
 
-    g_mesh orbMesh = graphics_create_mesh(numVertices, numIndices, 0, vertices, indices, nullptr);
+    g_mesh orbMesh = graphics_create_mesh(numVertices, numIndices, vertices, indices);
 
     free(vertices);
     free(indices);
