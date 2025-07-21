@@ -41,6 +41,12 @@ typedef struct { vec4 color; } c_tint_color;
 typedef struct { float shininess; } c_shininess;
 
 typedef struct {vec3 pos; vec3 viewPos; vec3 lightColor; } g_light;
+typedef struct emission {
+    vec3 orbColor;
+    float intensity;
+    vec3 centerPosition;
+    float radius;
+} c_emission;
 
 typedef struct {
     mat4 matrix;

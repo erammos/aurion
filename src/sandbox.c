@@ -146,6 +146,7 @@ main(void) {
     auto terrain_texture = graphics_load_texture("assets/marble2.jpg");
     ecs_add_mesh(terrain, &mesh_terrain);
     ecs_add_texture(terrain,&terrain_texture);
+    ecs_use_pbr_shader(terrain);
 
     //    auto cube = world_create_entity("cube", (vec3){50, 0.5f, 50}, (vec3){1, 1, 2},  (vec3){0, 0, 0}, terrain.entity);
     g_entity player = ecs_create_entity("player", (vec3){0, 0, 0}, (vec3){1.0f, 1.0f, 1.0f}, (vec3){0, 0, 0}, world);
@@ -157,23 +158,29 @@ main(void) {
     auto mesh_obj = graphics_load_obj("assets/sphere.obj", &player_texture);
     ecs_add_mesh(player, &mesh_obj);
     ecs_add_texture(player, &player_texture);
+    ecs_use_pbr_shader(player);
 
     g_entity light_origin = ecs_create_entity("origin", (vec3){0.0f, 0.0f, 0}, (vec3){1.0f, 1.0f, 1.0f}, (vec3){0, 0, 0}, player.entity);
     g_entity light = ecs_create_entity("light", (vec3){0, 3.0f, 10}, (vec3){1.0f, 1.0f, 1.0f}, (vec3){0, 0, 0}, light_origin.entity);
     ecs_add_mesh(light, &mesh_obj);
     ecs_add_texture(light, &player_texture);
+    ecs_use_pbr_shader(light);
 
-    // for (int i = 0 ; i < 100; i++) {
-    //
-    //     for (int j = 0 ; j < 100; j++) {
-    //         char name[20] = {};
-    //         snprintf(name, 20, "cube%i", i*100 + j);
-    //         g_entity cube = ecs_create_entity(name, (vec3){ i, 3, j}, (vec3){1.0f, 1.0f, 1.0f}, (vec3){0, 0, 0}, world);
-    //         ecs_add_mesh(cube, &mesh_obj);
-    //         ecs_add_texture(cube, &player_texture);
-    //     }
-    // }
-    //
+    for (int i = 0 ; i < 100; i++) {
+
+        for (int j = 0 ; j < 100; j++) {
+            char name[20] = {};
+            snprintf(name, 20, "cube%i", i*100 + j);
+            g_entity cube = ecs_create_entity(name, (vec3){ i, 3, j}, (vec3){1.0f, 1.0f, 1.0f}, (vec3){0, 0, 0}, world);
+            ecs_add_mesh(cube, &mesh_obj);
+            ecs_add_texture(cube, &player_texture);
+            ecs_use_emissive_shader(cube,(c_emission){.centerPosition = {0.0,1.0,0.0},
+                .orbColor = {1.0,0.8,1.0},
+                .intensity = 10.0f,
+                .radius = 0.75f});
+        }
+    }
+
 
     unsigned int prev_time = SDL_GetTicks();
 

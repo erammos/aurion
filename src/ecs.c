@@ -9,7 +9,9 @@
 #include "graphics.h"
 static ecs_world_t* ecs;
 static ecs_entity_t update_system;
-static ecs_entity_t render_system;
+static ecs_entity_t pbr_render_system;
+static ecs_entity_t emissive_render_system;
+
 
 ECS_COMPONENT_DECLARE(c_transform);
 ECS_COMPONENT_DECLARE(c_position);
@@ -19,10 +21,12 @@ ECS_COMPONENT_DECLARE(c_mesh);
 ECS_COMPONENT_DECLARE(c_texture);
 ECS_COMPONENT_DECLARE(g_light);
 ECS_COMPONENT_DECLARE(g_camera);
+ECS_COMPONENT_DECLARE(c_emission);
+
 ECS_TAG_DECLARE(World);
 ECS_TAG_DECLARE(Local);
 ECS_TAG_DECLARE(UsesPBRShader);
-ECS_TAG_DECLARE(UsesCelShader);
+ECS_TAG_DECLARE(UsesEmissiveShader);
 ecs_entity_t world;
 
 void
@@ -45,15 +49,15 @@ update_transform(ecs_iter_t* it) {
 }
 
 void
-renderPBR(ecs_iter_t* it) {
+pbr_render(ecs_iter_t* it) {
 
     c_transform* model = ecs_field(it, c_transform, 0);
     c_mesh* mesh = ecs_field(it, c_mesh, 1);
     c_texture* texture = ecs_field(it, c_texture, 2);
-    const  g_light* light = ecs_singleton_get(it->world,g_light);
-    const  g_camera* camera = ecs_singleton_get(it->world,g_camera);
+    const g_light* light = ecs_singleton_get(it->world, g_light);
+    const g_camera* camera = ecs_singleton_get(it->world, g_camera);
     graphics_use_shader(&g_pbr_shader);
-    graphics_set_light(light->pos,light->viewPos,light->lightColor);
+    graphics_set_light(light->pos, light->viewPos, light->lightColor);
     graphics_use_camera(camera);
     for (int i = 0; i < it->count; i++) {
         graphics_set_transform(model[i].matrix);
@@ -61,6 +65,27 @@ renderPBR(ecs_iter_t* it) {
         graphics_draw_mesh(&mesh[i]);
     }
 }
+
+void
+emissive_render(ecs_iter_t* it) {
+
+    c_transform* model = ecs_field(it, c_transform, 0);
+    c_mesh* mesh = ecs_field(it, c_mesh, 1);
+    c_emission* emission = ecs_field(it, c_emission, 2);
+    const g_camera* camera = ecs_singleton_get(it->world, g_camera);
+    graphics_use_shader(&g_cel_shader);
+    graphics_use_camera(camera);
+
+    for (int i = 0; i < it->count; i++) {
+        graphics_set_transform(model[i].matrix);
+        graphics_set_uniform_float("intensity", emission[i].intensity);
+        graphics_set_uniform_vec3("orbColor", emission[i].orbColor);
+        graphics_set_uniform_float("radius", emission[i].radius);
+        graphics_set_uniform_vec3("centerPosition", emission[i].centerPosition);
+        graphics_draw_mesh(&mesh[i]);
+    }
+}
+
 
 void
 ecs_init_systems() {
@@ -71,12 +96,13 @@ ecs_init_systems() {
     ECS_COMPONENT_DEFINE(ecs, c_rotation);
     ECS_COMPONENT_DEFINE(ecs, c_scale);
     ECS_COMPONENT_DEFINE(ecs, c_texture);
+    ECS_COMPONENT_DEFINE(ecs, c_emission);
 
 
     ECS_TAG_DEFINE(ecs, World);
     ECS_TAG_DEFINE(ecs, Local);
     ECS_TAG_DEFINE(ecs, UsesPBRShader);
-    ECS_TAG_DEFINE(ecs, UsesCelShader);
+    ECS_TAG_DEFINE(ecs, UsesEmissiveShader);
     update_system = ecs_system(
         ecs, {.entity = ecs_entity(ecs, {.name = "Update transform", .add = ecs_ids(ecs_dependson(EcsOnUpdate))}),
               .query.terms =
@@ -95,8 +121,8 @@ ecs_init_systems() {
                    }},
               .callback = update_transform});
 
-    render_system = ecs_system(
-        ecs, {.entity = ecs_entity(ecs, {.name = "Render", .add = ecs_ids(ecs_dependson(EcsPostFrame))}),
+    pbr_render_system = ecs_system(
+        ecs, {.entity = ecs_entity(ecs, {.name = "PBRRender", .add = ecs_ids(ecs_dependson(EcsPostFrame))}),
               .query.terms =
                   {
                       {.id = ecs_pair(ecs_id(c_transform), World), .inout = EcsIn},
@@ -104,7 +130,18 @@ ecs_init_systems() {
                        {.id = ecs_id(c_texture), .inout = EcsIn},
                        {.id  = UsesPBRShader}
                   },
-              .callback = renderPBR});
+              .callback = pbr_render});
+
+    emissive_render_system = ecs_system(
+    ecs, {.entity = ecs_entity(ecs, {.name = "EmissiveRender", .add = ecs_ids(ecs_dependson(EcsPostFrame))}),
+          .query.terms =
+              {
+                  {.id = ecs_pair(ecs_id(c_transform), World), .inout = EcsIn},
+                  {.id = ecs_id(c_mesh), .inout = EcsIn},
+                   {.id = ecs_id(c_emission), .inout = EcsIn},
+                   {.id  = UsesEmissiveShader}
+              },
+          .callback = emissive_render});
     world = ecs_entity(ecs, {.name = "root"});
 }
 
@@ -172,9 +209,21 @@ ecs_create_entity(const char* name, vec3 pos, vec3 scale, vec3 rotate, ecs_entit
 
 void
 ecs_add_mesh(g_entity e, c_mesh* m) {
-    // ecs_add(ecs, e.entity, c_mesh);
     ecs_set_ptr(ecs, e.entity, c_mesh, m);
+}
+void ecs_use_pbr_shader(g_entity e) {
     ecs_add(ecs,e.entity, UsesPBRShader);
+}
+void ecs_use_emissive_shader(g_entity e, c_emission emission) {
+    ECS_COMPONENT_DEFINE(ecs, c_emission);
+    ecs_add(ecs, e.entity, UsesEmissiveShader);
+
+    ecs_set(ecs, e.entity, c_emission, {
+        .centerPosition = {emission.centerPosition[0], emission.centerPosition[1], emission.centerPosition[2]},
+        .intensity = emission.intensity,
+        .orbColor = {emission.orbColor[0], emission.orbColor[1], emission.orbColor[2]},
+        .radius = emission.radius}
+    );
 }
 
 void ecs_add_texture(g_entity e, c_texture* t) {
@@ -233,7 +282,9 @@ ecs_get_scale(g_entity e) {
 
 void
 ecs_run_render_system() {
-    ecs_run(ecs, render_system, 0, 0);
+    ecs_run(ecs, pbr_render_system, 0, 0);
+    ecs_run(ecs, emissive_render_system, 0, 0);
+
 }
 
 void

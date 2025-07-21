@@ -31,5 +31,6 @@ c_position ecs_get_world_position(g_entity e);
 void ecs_set_light(vec3 pos, vec3 viewPos, vec3 lightColor);
 void ecs_add_texture(g_entity e, c_texture * t);
 void ecs_set_camera(g_camera * camera);
-
+void ecs_use_pbr_shader(g_entity e);
+void ecs_use_emissive_shader(g_entity e, c_emission emision);
 #endif
