@@ -180,7 +180,7 @@ graphics_destroy() {
 }
 
 void
-graphics_create_gl_buffer(g_mesh* mesh) {
+graphics_create_gl_buffer(c_mesh* mesh) {
     GL_CHECK(glGenVertexArrays(1, &mesh->vao));
     GL_CHECK(glGenBuffers(1, &mesh->vbo));
     GL_CHECK(glGenBuffers(1, &mesh->ebo));
@@ -204,11 +204,11 @@ graphics_create_gl_buffer(g_mesh* mesh) {
     GL_CHECK(glBindVertexArray(0));
 }
 
-g_mesh
+c_mesh
 graphics_create_mesh(size_t num_vertices, size_t num_indices,
                      g_vertex vertices[static num_vertices], unsigned int indices[static num_indices]
                      ) {
-    g_mesh mesh = {
+    c_mesh mesh = {
 
         .num_i = num_indices, .num_v = num_vertices};
 
@@ -219,29 +219,20 @@ graphics_create_mesh(size_t num_vertices, size_t num_indices,
 
     graphics_create_gl_buffer(&mesh);
 
-    return mesh;
+    return mesh/**/;
+}
+
+void graphics_bind_texture(c_texture tex) {
+
+        glActiveTexture(GL_TEXTURE0);
+        graphics_set_uniform_int(tex.type, 0);
+        GL_CHECK(glBindTexture(GL_TEXTURE_2D, tex.id));
+        GL_CHECK(glActiveTexture(GL_TEXTURE0));
 }
 
 void
-graphics_draw_mesh(g_mesh* mesh, g_material *material) {
-    unsigned int diffuseNr = 1;
-    unsigned int specularNr = 1;
-    for (unsigned int i = 0; i < material->num_t; i++) {
-        glActiveTexture(GL_TEXTURE0 + i);
-        char number[2] = {[1] = '\0'};
-        char name[30] = {};
-        strcpy(name, material->textures[i].type);
-        if (strcmp(name, "texture_diffuse") == 0) {
-            number[0] = '0' + diffuseNr++;
-        } else if (strcmp(name, "texture_specular") == 0) {
-            number[0] = '0' + specularNr++;
-        }
+graphics_draw_mesh(c_mesh* mesh) {
 
-        strcat(name, number);
-        graphics_set_uniform_int(name, i);
-        GL_CHECK(glBindTexture(GL_TEXTURE_2D, material->textures[i].id));
-    }
-    GL_CHECK(glActiveTexture(GL_TEXTURE0));
 
     // draw mesh
     GL_CHECK(glBindVertexArray(mesh->vao));
@@ -285,7 +276,7 @@ graphics_get_active_camera() {
     return active_camera;
 }
 
-g_texture
+c_texture
 graphics_load_texture(const char* path) {
     int width, height;
     unsigned int texture;
@@ -306,22 +297,22 @@ graphics_load_texture(const char* path) {
         exit(1);
     }
     assets_free_image(data);
-    return (g_texture){.id = texture, .type = "texture_diffuse"};
+    return (c_texture){.id = texture, .type = "texture_diffuse"};
 }
 
-g_mesh
-graphics_load_obj(const char* path, g_material* material) {
+c_mesh
+graphics_load_obj(const char* path, c_texture * texture) {
     const char* dot = strrchr(path, '.');
 
-    g_mesh mesh;
+    c_mesh mesh;
     // Ensure a dot was found and it's not the first character (e.g., ".bashrc")
     if (dot && dot != path) {
         // Compare the substring after the dot with our known extensions
         if (strcmp(dot, ".obj") == 0) {
-            mesh = assets_load_obj(path, material);
+            mesh = assets_load_obj(path, texture);
         }
         if (strcmp(dot, ".gltf") == 0) {
-            mesh = assets_load_gltf(path, material);
+            mesh = assets_load_gltf(path, texture);
         }
     }
     graphics_create_gl_buffer(&mesh);
@@ -355,18 +346,25 @@ perlin_noise(float x, float y, int octaves, float lacunarity, float persistence)
     return total / maxValue;
 }
 
-g_mesh
+c_mesh
 graphics_create_terrain(int terrain_width, int terrain_height) {
 
     g_vertex vertices[terrain_width * terrain_height];
     unsigned int indices[(terrain_width - 1) * (terrain_height - 1) * 6];
 
-    float perlin_scale = 0.01f;
+    float perlin_scale = 0.02f;      // Zoom out to create large features
+    float mountain_height = 50.0f;   // A multiplier to make mountains taller
+
     for (int y = 0; y < terrain_height; ++y) {
         for (int x = 0; x < terrain_width; ++x) {
-            float height = 200.0f * perlin_noise((float)x * perlin_scale, (float)y * perlin_scale, 6, 0.9f, 1.5f);
+            // Parameters for smooth mountains: 6 octaves, standard lacunarity, and persistence of 0.5
+            float height = perlin_noise((float)x * perlin_scale, (float)y * perlin_scale, 6, 2.0f, 0.5f);
+
+            // Apply the height multiplier
+            height *= mountain_height;
+
             if (x > 10 && x < 40 && y > 10 && y < 40) {
-                height = 0;
+                height = -12;
             }
 
             glm_vec3_copy((vec3){(float)x, height, (float)y}, vertices[y * terrain_width + x].position);
@@ -437,20 +435,12 @@ generate_circle(vec3* circle, int segments, float radius) {
 }
 
 
-g_material graphics_create_material(const char * texture_path,g_shader shader) {
-    g_material material;
-    material.num_t = 1;
-    material.textures = (g_texture*)malloc(material.num_t * sizeof(g_texture));
-    material.textures[0] = graphics_load_texture(texture_path);
-    material.shader = shader;
-    return material;
-}
-g_mesh
+c_mesh
 graphics_generate_tunnel(int segments, int length, float radius) {
     vec3* circle = (vec3*)malloc(segments * sizeof(vec3));
     generate_circle(circle, segments, radius);
 
-    g_mesh mesh;
+    c_mesh mesh;
     mesh.num_v = segments * length;
     mesh.num_i = segments * (length - 1) * 6;
     mesh.vertices = (g_vertex*)malloc(mesh.num_v * sizeof(g_vertex));
@@ -496,7 +486,7 @@ graphics_generate_tunnel(int segments, int length, float radius) {
     return mesh;
 }
 
-g_mesh
+c_mesh
 create_orb_mesh(float radius, int sectors, int stacks) {
     int numVertices = (sectors + 1) * (stacks + 1);
     int numIndices = sectors * stacks * 6;
@@ -558,7 +548,7 @@ create_orb_mesh(float radius, int sectors, int stacks) {
         }
     }
 
-    g_mesh orbMesh = graphics_create_mesh(numVertices, numIndices, vertices, indices);
+    c_mesh orbMesh = graphics_create_mesh(numVertices, numIndices, vertices, indices);
 
     free(vertices);
     free(indices);

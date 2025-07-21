@@ -17,7 +17,7 @@ test_teardown(void) {
 MU_TEST(test_check) {
     fastObjMesh* mesh = fast_obj_read("assets/test.obj");
 
-    g_mesh gmesh;
+    c_mesh gmesh;
 
     gmesh.num_v = mesh->face_count * 3;
     gmesh.num_i = gmesh.num_v;

@@ -11,22 +11,25 @@ static ecs_world_t* ecs;
 static ecs_entity_t update_system;
 static ecs_entity_t render_system;
 
-ECS_COMPONENT_DECLARE(g_transform);
-ECS_COMPONENT_DECLARE(g_position);
-ECS_COMPONENT_DECLARE(g_rotation);
-ECS_COMPONENT_DECLARE(g_scale);
-ECS_COMPONENT_DECLARE(g_mesh);
-ECS_COMPONENT_DECLARE(g_material);
+ECS_COMPONENT_DECLARE(c_transform);
+ECS_COMPONENT_DECLARE(c_position);
+ECS_COMPONENT_DECLARE(c_rotation);
+ECS_COMPONENT_DECLARE(c_scale);
+ECS_COMPONENT_DECLARE(c_mesh);
+ECS_COMPONENT_DECLARE(c_texture);
+ECS_COMPONENT_DECLARE(c_light);
 ECS_TAG_DECLARE(World);
 ECS_TAG_DECLARE(Local);
+ECS_TAG_DECLARE(UsesPBRShader);
+ECS_TAG_DECLARE(UsesCelShader);
 ecs_entity_t world;
 
 void
 update_transform(ecs_iter_t* it) {
     // Print delta_time. The same value is passed to all systems.
-    g_transform* local = ecs_field(it, g_transform, 0);
-    g_transform* world = ecs_field(it, g_transform, 1);
-    g_transform* parent_world = ecs_field(it, g_transform, 2);
+    c_transform* local = ecs_field(it, c_transform, 0);
+    c_transform* world = ecs_field(it, c_transform, 1);
+    c_transform* parent_world = ecs_field(it, c_transform, 2);
 
     // Inner loop, iterates entities in archetype
     for (int i = 0; i < it->count; i++) {
@@ -41,42 +44,47 @@ update_transform(ecs_iter_t* it) {
 }
 
 void
-render(ecs_iter_t* it) {
-    g_transform* model = ecs_field(it, g_transform, 0);
-    g_mesh* mesh = ecs_field(it, g_mesh, 1);
-    g_material * material= ecs_field(it, g_material, 2);
+renderPBR(ecs_iter_t* it) {
 
+    c_transform* model = ecs_field(it, c_transform, 0);
+    c_mesh* mesh = ecs_field(it, c_mesh, 1);
+    c_texture* texture = ecs_field(it, c_texture, 2);
+    const  c_light* light = ecs_singleton_get(it->world,c_light);
 
+    graphics_use_shader(&g_pbr_shader);
+    graphics_set_light(light->pos,light->viewPos,light->lightColor);
     for (int i = 0; i < it->count; i++) {
-        graphics_use_shader(&material->shader);
         graphics_set_transform(model[i].matrix);
-        graphics_draw_mesh(&mesh[i],&material[i]);
+        graphics_bind_texture(texture[i]);
+        graphics_draw_mesh(&mesh[i]);
     }
 }
 
 void
 ecs_init_systems() {
     ecs = ecs_init();
-    ECS_COMPONENT_DEFINE(ecs, g_transform);
-    ECS_COMPONENT_DEFINE(ecs, g_mesh);
-    ECS_COMPONENT_DEFINE(ecs, g_position);
-    ECS_COMPONENT_DEFINE(ecs, g_rotation);
-    ECS_COMPONENT_DEFINE(ecs, g_scale);
-    ECS_COMPONENT_DEFINE(ecs, g_material);
+    ECS_COMPONENT_DEFINE(ecs, c_transform);
+    ECS_COMPONENT_DEFINE(ecs, c_mesh);
+    ECS_COMPONENT_DEFINE(ecs, c_position);
+    ECS_COMPONENT_DEFINE(ecs, c_rotation);
+    ECS_COMPONENT_DEFINE(ecs, c_scale);
+    ECS_COMPONENT_DEFINE(ecs, c_texture);
 
 
     ECS_TAG_DEFINE(ecs, World);
     ECS_TAG_DEFINE(ecs, Local);
+    ECS_TAG_DEFINE(ecs, UsesPBRShader);
+    ECS_TAG_DEFINE(ecs, UsesCelShader);
     update_system = ecs_system(
         ecs, {.entity = ecs_entity(ecs, {.name = "Update transform", .add = ecs_ids(ecs_dependson(EcsOnUpdate))}),
               .query.terms =
                   {// Read from entity's Local position
-                   {.id = ecs_pair(ecs_id(g_transform), Local), .inout = EcsIn},
+                   {.id = ecs_pair(ecs_id(c_transform), Local), .inout = EcsIn},
                    // Write to entity's World position
-                   {.id = ecs_pair(ecs_id(g_transform), World), .inout = EcsOut},
+                   {.id = ecs_pair(ecs_id(c_transform), World), .inout = EcsOut},
 
                    // Read from parent's World position
-                   {.id = ecs_pair(ecs_id(g_transform), World),
+                   {.id = ecs_pair(ecs_id(c_transform), World),
                     .inout = EcsIn,
                     // Get from the parent in breadth-first order (cascade)
                     .src.id = EcsCascade,
@@ -89,11 +97,12 @@ ecs_init_systems() {
         ecs, {.entity = ecs_entity(ecs, {.name = "Render", .add = ecs_ids(ecs_dependson(EcsPostFrame))}),
               .query.terms =
                   {
-                      {.id = ecs_pair(ecs_id(g_transform), World), .inout = EcsIn},
-                      {.id = ecs_id(g_mesh), .inout = EcsIn},
-                      {.id = ecs_id(g_material), .inout = EcsIn}
+                      {.id = ecs_pair(ecs_id(c_transform), World), .inout = EcsIn},
+                      {.id = ecs_id(c_mesh), .inout = EcsIn},
+                       {.id = ecs_id(c_texture), .inout = EcsIn},
+                       {.id  = UsesPBRShader}
                   },
-              .callback = render});
+              .callback = renderPBR});
     world = ecs_entity(ecs, {.name = "root"});
 }
 
@@ -104,11 +113,11 @@ destroy_ecs() {
 
 void
 ecs_transform_entity(g_entity e, vec3 pos, vec3 scale, vec3 rotate) {
-    auto p = ecs_get_mut_pair(ecs, e.entity, g_transform, Local);
+    auto p = ecs_get_mut_pair(ecs, e.entity, c_transform, Local);
 
-    ecs_set(ecs, e.entity, g_position, {.position = {pos[0], pos[1], pos[2]}});
-    ecs_set(ecs, e.entity, g_rotation, {.rotation = {rotate[0], rotate[1], rotate[2]}});
-    ecs_set(ecs, e.entity, g_scale, {.scale = {scale[0], scale[1], scale[2]}});
+    ecs_set(ecs, e.entity, c_position, {.position = {pos[0], pos[1], pos[2]}});
+    ecs_set(ecs, e.entity, c_rotation, {.rotation = {rotate[0], rotate[1], rotate[2]}});
+    ecs_set(ecs, e.entity, c_scale, {.scale = {scale[0], scale[1], scale[2]}});
     mat4 rotation_mat;
     mat4 scale_mat;
     mat4 translation_mat;
@@ -121,26 +130,26 @@ ecs_transform_entity(g_entity e, vec3 pos, vec3 scale, vec3 rotate) {
 
 void
 ecs_translate_entity(g_entity e, vec3 pos) {
-    auto p = ecs_get_mut_pair(ecs, e.entity, g_transform, Local);
+    auto p = ecs_get_mut_pair(ecs, e.entity, c_transform, Local);
     glm_translate(p->matrix, pos);
 }
 
 void
 ecs_scale_entity(g_entity e, vec3 scale) {
-    auto p = ecs_get_mut_pair(ecs, e.entity, g_transform, Local);
+    auto p = ecs_get_mut_pair(ecs, e.entity, c_transform, Local);
     glm_scale(p->matrix, scale);
 }
 
 void
 ecs_rotate_entity(g_entity e, float angle, vec3 axis) {
-    auto p = ecs_get_mut_pair(ecs, e.entity, g_transform, Local);
+    auto p = ecs_get_mut_pair(ecs, e.entity, c_transform, Local);
     glm_rotate(p->matrix, glm_rad(angle), axis);
 }
 
 void
 ecs_reset_entity(g_entity e) {
 
-    auto p = ecs_get_mut_pair(ecs, e.entity, g_transform, Local);
+    auto p = ecs_get_mut_pair(ecs, e.entity, c_transform, Local);
     glm_mat4_identity(p->matrix);
 }
 
@@ -148,11 +157,11 @@ g_entity
 ecs_create_entity(const char* name, vec3 pos, vec3 scale, vec3 rotate, ecs_entity_t parent) {
 
     ecs_entity_t e = ecs_entity(ecs, {.name = name});
-    ecs_set(ecs, e, g_position, {.position = {pos[0], pos[1], pos[2]}});
-    ecs_set(ecs, e, g_rotation, {.rotation = {rotate[0], rotate[1], rotate[2]}});
-    ecs_set(ecs, e, g_scale, {.scale = {scale[0], scale[1], scale[2]}});
-    ecs_set_pair(ecs, e, g_transform, World, {GLM_MAT4_IDENTITY_INIT});
-    ecs_set_pair(ecs, e, g_transform, Local, {GLM_MAT4_IDENTITY_INIT});
+    ecs_set(ecs, e, c_position, {.position = {pos[0], pos[1], pos[2]}});
+    ecs_set(ecs, e, c_rotation, {.rotation = {rotate[0], rotate[1], rotate[2]}});
+    ecs_set(ecs, e, c_scale, {.scale = {scale[0], scale[1], scale[2]}});
+    ecs_set_pair(ecs, e, c_transform, World, {GLM_MAT4_IDENTITY_INIT});
+    ecs_set_pair(ecs, e, c_transform, Local, {GLM_MAT4_IDENTITY_INIT});
     ecs_add_pair(ecs, e, EcsChildOf, parent);
     auto out = (g_entity){.entity = e, .parent = parent};
     ecs_transform_entity(out, pos, scale, rotate);
@@ -160,51 +169,55 @@ ecs_create_entity(const char* name, vec3 pos, vec3 scale, vec3 rotate, ecs_entit
 }
 
 void
-ecs_add_mesh(g_entity e, g_mesh* m) {
-    // ecs_add(ecs, e.entity, g_mesh);
-    ecs_set_ptr(ecs, e.entity, g_mesh, m);
+ecs_add_mesh(g_entity e, c_mesh* m) {
+    // ecs_add(ecs, e.entity, c_mesh);
+    ecs_set_ptr(ecs, e.entity, c_mesh, m);
 }
-void
-ecs_add_material(g_entity e, g_material * m) {
-    ecs_set_ptr(ecs, e.entity, g_material, m);
+void ecs_add_texture(g_entity e, c_texture* t) {
+    ecs_set_ptr(ecs, e.entity, c_texture, t);
 }
 
+void ecs_set_light(vec3 pos, vec3 viewPos, vec3 lightColor)
+ {
+    ECS_COMPONENT_DEFINE(ecs, c_light);
+    ecs_singleton_set(ecs,c_light, {.pos = {pos[0], pos[1], pos[2]}, .lightColor = {lightColor[0], lightColor[1], lightColor[2]} , .viewPos = {viewPos[0], viewPos[1], viewPos[2]}});
+ }
 void
 ecs_get_local_transform(g_entity e, mat4** out) {
-    auto p = ecs_get_mut_pair(ecs, e.entity, g_transform, Local);
+    auto p = ecs_get_mut_pair(ecs, e.entity, c_transform, Local);
     *out = &p->matrix;
 }
 
 mat4 *
 ecs_get_world_transform(g_entity e) {
-    auto p = ecs_get_mut_pair(ecs, e.entity, g_transform, World);
+    auto p = ecs_get_mut_pair(ecs, e.entity, c_transform, World);
     return p->matrix;
 }
 
-g_position*
+c_position*
 ecs_get_position(g_entity e) {
-    auto p = ecs_get_mut(ecs, e.entity, g_position);
+    auto p = ecs_get_mut(ecs, e.entity, c_position);
     return p;
 }
 
-g_position
+c_position
 ecs_get_world_position(g_entity e) {
-    auto p = ecs_get_mut(ecs, e.entity, g_position);
+    auto p = ecs_get_mut(ecs, e.entity, c_position);
     auto  transform = ecs_get_world_transform(e);
-    g_position out = {0};
+    c_position out = {0};
     glm_mat4_mulv3(*transform, p->position,1,out.position) ;
     return out;
 }
 
-g_rotation*
+c_rotation*
 ecs_get_rotation(g_entity e) {
-    auto p = ecs_get_mut(ecs, e.entity, g_rotation);
+    auto p = ecs_get_mut(ecs, e.entity, c_rotation);
     return p;
 }
 
-g_scale*
+c_scale*
 ecs_get_scale(g_entity e) {
-    auto p = ecs_get_mut(ecs, e.entity, g_scale);
+    auto p = ecs_get_mut(ecs, e.entity, c_scale);
     return p;
 }
 

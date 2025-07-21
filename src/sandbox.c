@@ -57,7 +57,7 @@ char rot_log[100] = {0};
 // }
 
 // Gets the height on the terrain mesh at world coordinates (x, z)
-float get_height_on_terrain(float x, float z, g_mesh terrain) {
+float get_height_on_terrain(float x, float z, c_mesh terrain) {
     int terrain_width = 100; // Must match the width used in graphics_create_terrain
     int terrain_depth = 100; // Must match the depth used in graphics_create_terrain
 
@@ -95,10 +95,10 @@ float get_height_on_terrain(float x, float z, g_mesh terrain) {
     return final_height;
 }
 void
-player_move(g_entity e, vec3 mouse_pos, vec3 input_axis, float speed, float sensitivity, float dt, g_mesh mesh_terrain) {
+player_move(g_entity e, vec3 mouse_pos, vec3 input_axis, float speed, float sensitivity, float dt, c_mesh mesh_terrain) {
 
 
-    g_rotation* g_rotation = ecs_get_rotation(e);
+    c_rotation* g_rotation = ecs_get_rotation(e);
     vec2 dir;
     float scale_v = speed * dt * input_axis[1];
     float scale_h = speed * dt * -input_axis[0];
@@ -106,8 +106,8 @@ player_move(g_entity e, vec3 mouse_pos, vec3 input_axis, float speed, float sens
     dir[1] = cos(glm_rad(g_rotation->rotation[1]));
     sprintf(front_log, "%f %f", input_axis[0], input_axis[1]);
     sprintf(rot_log, "%f %f %f", g_rotation->rotation[0], g_rotation->rotation[1], g_rotation->rotation[2]);
-    g_position* g_pos = ecs_get_position(e);
-    g_scale* g_scale = ecs_get_scale(e);
+    c_position* g_pos = ecs_get_position(e);
+    c_scale* g_scale = ecs_get_scale(e);
 
     g_pos->position[0] += scale_v * dir[0];
     g_pos->position[2] += scale_v * dir[1];
@@ -137,14 +137,14 @@ main(void) {
     gui_init(window);
     ecs_init_systems();
 
-    g_shader light_shader = graphics_load_shaders( "assets/light.vert", "assets/light.frag");
-    g_shader orb_shader = graphics_load_shaders("assets/emissive.vert", "assets/emissive.frag");
+     g_pbr_shader = graphics_load_shaders( "assets/light.vert", "assets/light.frag");
+    g_cel_shader = graphics_load_shaders("assets/emissive.vert", "assets/emissive.frag");
 
     auto mesh_terrain = graphics_create_terrain(100, 100);
     auto terrain = ecs_create_entity("terrain", (vec3){0, 0, 0}, (vec3){1, 1, 1}, (vec3){0, 0, 0}, world);
-    auto terrain_material = graphics_create_material("assets/marble2.jpg",light_shader);
+    auto terrain_texture = graphics_load_texture("assets/marble2.jpg");
     ecs_add_mesh(terrain, &mesh_terrain);
-    ecs_add_material(terrain,&terrain_material);
+    ecs_add_texture(terrain,terrain_texutr)
 
     //    auto cube = world_create_entity("cube", (vec3){50, 0.5f, 50}, (vec3){1, 1, 2},  (vec3){0, 0, 0}, terrain.entity);
     g_entity player = ecs_create_entity("player", (vec3){0, 0, 0}, (vec3){1.0f, 1.0f, 1.0f}, (vec3){0, 0, 0}, world);
@@ -152,17 +152,12 @@ main(void) {
                                         player.entity);
 
   //  auto mesh_obj = graphics_load_obj("assets/sphere.obj");
-    g_material player_material;
     auto mesh_obj = graphics_load_obj("assets/sphere.obj", &player_material);
-    player_material.shader = light_shader;
     ecs_add_mesh(player, &mesh_obj);
-    ecs_add_material(player,&player_material);
 
     g_entity light_origin = ecs_create_entity("origin", (vec3){0.0f, 0.0f, 0}, (vec3){1.0f, 1.0f, 1.0f}, (vec3){0, 0, 0}, player.entity);
     g_entity light = ecs_create_entity("light", (vec3){0, 3.0f, 10}, (vec3){1.0f, 1.0f, 1.0f}, (vec3){0, 0, 0}, light_origin.entity);
-    g_material orb_material  = graphics_create_material("assets/marble2.jpg",orb_shader);
     ecs_add_mesh(light, &mesh_obj);
-    ecs_add_material(light, &orb_material);
 
     unsigned int prev_time = SDL_GetTicks();
 
@@ -187,8 +182,6 @@ main(void) {
 
         mat4* model = ecs_get_world_transform(e_camera);
         glm_mat4_inv(*model, camera.view);
-
-
 
 
         graphics_begin();

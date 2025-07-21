@@ -20,60 +20,67 @@ typedef struct {
 typedef struct {
     unsigned int id;
     const char* type;
-} g_texture;
+} c_texture;
 
 typedef struct {
     g_vertex* vertices;
     unsigned int* indices;
     size_t num_v, num_i;
     unsigned int vao, vbo, ebo;
-} g_mesh;
+} c_mesh;
 
-typedef struct {
-    g_shader shader;
-    g_texture* textures;
-    size_t num_t;
-} g_material;
+g_shader g_pbr_shader;
+g_shader g_cel_shader;
+
+
+typedef struct { c_texture texture; } c_diffuse_texture;
+typedef struct { c_texture texture; } c_specular_texture;
+typedef struct { c_texture texture; } c_normal_map;
+
+typedef struct { vec4 color; } c_tint_color;
+typedef struct { float shininess; } c_shininess;
+
+typedef struct {vec3 pos; vec3 viewPos; vec3 lightColor; } c_light;
 
 typedef struct {
     mat4 matrix;
-} g_transform;
+} c_transform;
 typedef struct {
     vec3 position; 
-} g_position;
+} c_position;
 typedef struct {
     vec3 rotation; 
-} g_rotation;
+} c_rotation;
 typedef struct {
     vec3 scale; 
-} g_scale;
+} c_scale;
 
 double degrees(double radians);
 double radians(double degrees);
 
-g_mesh graphics_create_mesh(size_t num_vertices, size_t num_indices,
+c_mesh graphics_create_mesh(size_t num_vertices, size_t num_indices,
                             g_vertex vertices[static num_vertices], unsigned int indices[static num_indices]);
 int graphics_init(void* window);
 void graphics_destroy();
 g_shader graphics_load_shaders(const char* vs_file, const char* fs_file);
-void graphics_draw_mesh(g_mesh* mesh, g_material *material);
+void graphics_draw_mesh(c_mesh* mesh);
 void graphics_begin();
 void graphics_end();
 void graphics_use_shader(g_shader* shader);
 void graphics_use_camera(g_camera* camera);
-g_texture graphics_load_texture(const char* path);
+c_texture graphics_load_texture(const char* path);
 void graphics_set_transform(mat4 transform);
 g_camera * 
 graphics_get_active_camera();
 int graphics_get_width();
 int graphics_get_height();
-g_mesh graphics_load_obj(const char* path,g_material* material);
+c_mesh graphics_load_obj(const char* path,c_texture* texture);
 void graphics_set_light(vec3 pos, vec3 viewPos, vec3 lightColor);
-g_mesh graphics_create_terrain(int terrain_width, int terrain_height);
-void graphics_create_gl_buffer(g_mesh* mesh);
+c_mesh graphics_create_terrain(int terrain_width, int terrain_height);
+void graphics_create_gl_buffer(c_mesh* mesh);
 void graphics_set_uniform_vec3(const char* name, vec3 vec);
 void graphics_set_uniform_float(const char* name, float value);
 void graphics_set_uniform_mat4(const char* name, mat4 matrix);
 void graphics_set_uniform_int(const char* name, int value);
-g_material graphics_create_material(const char * texture_path,g_shader shader);
+void graphics_bind_texture(c_texture tex);
 
