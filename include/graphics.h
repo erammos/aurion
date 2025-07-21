@@ -40,7 +40,7 @@ typedef struct { c_texture texture; } c_normal_map;
 typedef struct { vec4 color; } c_tint_color;
 typedef struct { float shininess; } c_shininess;
 
-typedef struct {vec3 pos; vec3 viewPos; vec3 lightColor; } c_light;
+typedef struct {vec3 pos; vec3 viewPos; vec3 lightColor; } g_light;
 
 typedef struct {
     mat4 matrix;

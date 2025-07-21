@@ -95,8 +95,8 @@ float get_height_on_terrain(float x, float z, c_mesh terrain) {
     return final_height;
 }
 void
-player_move(g_entity e, vec3 mouse_pos, vec3 input_axis, float speed, float sensitivity, float dt, c_mesh mesh_terrain) {
-
+player_move(g_entity e, vec3 mouse_pos, vec3 input_axis, float speed, float sensitivity, float dt,
+            c_mesh mesh_terrain) {
 
     c_rotation* g_rotation = ecs_get_rotation(e);
     vec2 dir;
@@ -125,6 +125,7 @@ player_move(g_entity e, vec3 mouse_pos, vec3 input_axis, float speed, float sens
     ecs_rotate_entity(e, g_rotation->rotation[0], (vec3){1, 0, 0});
 }
 
+
 int
 main(void) {
     SDL_Init(SDL_INIT_EVERYTHING);
@@ -144,7 +145,7 @@ main(void) {
     auto terrain = ecs_create_entity("terrain", (vec3){0, 0, 0}, (vec3){1, 1, 1}, (vec3){0, 0, 0}, world);
     auto terrain_texture = graphics_load_texture("assets/marble2.jpg");
     ecs_add_mesh(terrain, &mesh_terrain);
-    ecs_add_texture(terrain,terrain_texutr)
+    ecs_add_texture(terrain,&terrain_texture);
 
     //    auto cube = world_create_entity("cube", (vec3){50, 0.5f, 50}, (vec3){1, 1, 2},  (vec3){0, 0, 0}, terrain.entity);
     g_entity player = ecs_create_entity("player", (vec3){0, 0, 0}, (vec3){1.0f, 1.0f, 1.0f}, (vec3){0, 0, 0}, world);
@@ -152,12 +153,27 @@ main(void) {
                                         player.entity);
 
   //  auto mesh_obj = graphics_load_obj("assets/sphere.obj");
-    auto mesh_obj = graphics_load_obj("assets/sphere.obj", &player_material);
+    c_texture player_texture;
+    auto mesh_obj = graphics_load_obj("assets/sphere.obj", &player_texture);
     ecs_add_mesh(player, &mesh_obj);
+    ecs_add_texture(player, &player_texture);
 
     g_entity light_origin = ecs_create_entity("origin", (vec3){0.0f, 0.0f, 0}, (vec3){1.0f, 1.0f, 1.0f}, (vec3){0, 0, 0}, player.entity);
     g_entity light = ecs_create_entity("light", (vec3){0, 3.0f, 10}, (vec3){1.0f, 1.0f, 1.0f}, (vec3){0, 0, 0}, light_origin.entity);
     ecs_add_mesh(light, &mesh_obj);
+    ecs_add_texture(light, &player_texture);
+
+    // for (int i = 0 ; i < 100; i++) {
+    //
+    //     for (int j = 0 ; j < 100; j++) {
+    //         char name[20] = {};
+    //         snprintf(name, 20, "cube%i", i*100 + j);
+    //         g_entity cube = ecs_create_entity(name, (vec3){ i, 3, j}, (vec3){1.0f, 1.0f, 1.0f}, (vec3){0, 0, 0}, world);
+    //         ecs_add_mesh(cube, &mesh_obj);
+    //         ecs_add_texture(cube, &player_texture);
+    //     }
+    // }
+    //
 
     unsigned int prev_time = SDL_GetTicks();
 
@@ -185,12 +201,10 @@ main(void) {
 
 
         graphics_begin();
-        graphics_use_shader(&player_material.shader);
         auto pos = ecs_get_world_position(light);
         auto player_pos = ecs_get_world_position(e_camera);
-        graphics_set_light(pos.position,player_pos.position,(vec3){1,1,1});;
-        graphics_use_camera(&camera);
-
+        ecs_set_light(pos.position,player_pos.position,(vec3){1.0f,1.0f,1.0f});
+        ecs_set_camera(&camera);
         ecs_run_render_system();
 
         gui_begin();

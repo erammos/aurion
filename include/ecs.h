@@ -29,5 +29,7 @@ void ecs_rotate_entity(g_entity e, float angle, vec3 axis);
 void ecs_reset_entity(g_entity e);
 c_position ecs_get_world_position(g_entity e);
 void ecs_set_light(vec3 pos, vec3 viewPos, vec3 lightColor);
+void ecs_add_texture(g_entity e, c_texture * t);
+void ecs_set_camera(g_camera * camera);
 
 #endif

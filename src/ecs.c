@@ -17,7 +17,8 @@ ECS_COMPONENT_DECLARE(c_rotation);
 ECS_COMPONENT_DECLARE(c_scale);
 ECS_COMPONENT_DECLARE(c_mesh);
 ECS_COMPONENT_DECLARE(c_texture);
-ECS_COMPONENT_DECLARE(c_light);
+ECS_COMPONENT_DECLARE(g_light);
+ECS_COMPONENT_DECLARE(g_camera);
 ECS_TAG_DECLARE(World);
 ECS_TAG_DECLARE(Local);
 ECS_TAG_DECLARE(UsesPBRShader);
@@ -49,10 +50,11 @@ renderPBR(ecs_iter_t* it) {
     c_transform* model = ecs_field(it, c_transform, 0);
     c_mesh* mesh = ecs_field(it, c_mesh, 1);
     c_texture* texture = ecs_field(it, c_texture, 2);
-    const  c_light* light = ecs_singleton_get(it->world,c_light);
-
+    const  g_light* light = ecs_singleton_get(it->world,g_light);
+    const  g_camera* camera = ecs_singleton_get(it->world,g_camera);
     graphics_use_shader(&g_pbr_shader);
     graphics_set_light(light->pos,light->viewPos,light->lightColor);
+    graphics_use_camera(camera);
     for (int i = 0; i < it->count; i++) {
         graphics_set_transform(model[i].matrix);
         graphics_bind_texture(texture[i]);
@@ -172,16 +174,24 @@ void
 ecs_add_mesh(g_entity e, c_mesh* m) {
     // ecs_add(ecs, e.entity, c_mesh);
     ecs_set_ptr(ecs, e.entity, c_mesh, m);
+    ecs_add(ecs,e.entity, UsesPBRShader);
 }
+
 void ecs_add_texture(g_entity e, c_texture* t) {
+    // Now you are passing the pointer directly to ecs_set, which is what it expects.
     ecs_set_ptr(ecs, e.entity, c_texture, t);
 }
 
 void ecs_set_light(vec3 pos, vec3 viewPos, vec3 lightColor)
  {
-    ECS_COMPONENT_DEFINE(ecs, c_light);
-    ecs_singleton_set(ecs,c_light, {.pos = {pos[0], pos[1], pos[2]}, .lightColor = {lightColor[0], lightColor[1], lightColor[2]} , .viewPos = {viewPos[0], viewPos[1], viewPos[2]}});
+    ECS_COMPONENT_DEFINE(ecs, g_light);
+    ecs_singleton_set(ecs,g_light, {.pos = {pos[0], pos[1], pos[2]}, .lightColor = {lightColor[0], lightColor[1], lightColor[2]} , .viewPos = {viewPos[0], viewPos[1], viewPos[2]}});
  }
+void ecs_set_camera(g_camera * camera)
+{
+    ECS_COMPONENT_DEFINE(ecs, g_camera);
+    ecs_singleton_set_ptr(ecs,g_camera,camera);
+}
 void
 ecs_get_local_transform(g_entity e, mat4** out) {
     auto p = ecs_get_mut_pair(ecs, e.entity, c_transform, Local);
