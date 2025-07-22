@@ -16,7 +16,7 @@ uniform vec3 viewPos;
 void main()
 {
     vec3 color = texture(texture_diffuse1, fs_in.TexCoords).rgb;
-    float ambient_strength = 1.3f;
+    float ambient_strength = 0.3f;
     vec3 ambient_color = lightColor * ambient_strength;
     vec3 normal = normalize(fs_in.Normal);
     vec3 light_dir = normalize(lightPos - fs_in.FragPos);

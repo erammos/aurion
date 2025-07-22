@@ -164,22 +164,25 @@ main(void) {
     g_entity light = ecs_create_entity("light", (vec3){0, 3.0f, 10}, (vec3){1.0f, 1.0f, 1.0f}, (vec3){0, 0, 0}, light_origin.entity);
     ecs_add_mesh(light, &mesh_obj);
     ecs_add_texture(light, &player_texture);
-    ecs_use_pbr_shader(light);
+    ecs_use_emissive_shader(light,(c_emission){.centerPosition = {0.0,0.0,0.0},
+               .orbColor = {1.0,0.8,1.0},
+               .intensity = 1000.0f,
+               .radius = 1.01f});
 
-    for (int i = 0 ; i < 100; i++) {
-
-        for (int j = 0 ; j < 100; j++) {
-            char name[20] = {};
-            snprintf(name, 20, "cube%i", i*100 + j);
-            g_entity cube = ecs_create_entity(name, (vec3){ i, 3, j}, (vec3){1.0f, 1.0f, 1.0f}, (vec3){0, 0, 0}, world);
-            ecs_add_mesh(cube, &mesh_obj);
-            ecs_add_texture(cube, &player_texture);
-            ecs_use_emissive_shader(cube,(c_emission){.centerPosition = {0.0,1.0,0.0},
-                .orbColor = {1.0,0.8,1.0},
-                .intensity = 10.0f,
-                .radius = 0.75f});
-        }
-    }
+    // for (int i = 0 ; i < 10; i++) {
+    //
+    //     for (int j = 0 ; j < 10; j++) {
+    //         char name[20] = {};
+    //         snprintf(name, 20, "cube%i", i*100 + j);
+    //         g_entity cube = ecs_create_entity(name, (vec3){ i, 3, j}, (vec3){1.0f, 1.0f, 1.0f}, (vec3){0, 0, 0}, world);
+    //         ecs_add_mesh(cube, &mesh_obj);
+    //         ecs_add_texture(cube, &player_texture);
+    //         ecs_use_pbr_shader(cube);
+    //
+    //
+    //
+    //     }
+    // }
 
 
     unsigned int prev_time = SDL_GetTicks();
