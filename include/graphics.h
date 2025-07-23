@@ -80,7 +80,7 @@ g_camera *
 graphics_get_active_camera();
 int graphics_get_width();
 int graphics_get_height();
-c_mesh graphics_load_obj(const char* path,c_texture* texture);
+c_mesh graphics_load_model(const char* path,c_texture* texture);
 void graphics_set_light(vec3 pos, vec3 viewPos, vec3 lightColor);
 c_mesh graphics_create_terrain(int terrain_width, int terrain_height);
 void graphics_create_gl_buffer(c_mesh* mesh);

@@ -214,7 +214,7 @@ c_mesh assets_load_gltf(const char* path,c_texture* texture) {
         cgltf_texture_view* tex_view = &primitive->material->pbr_metallic_roughness.base_color_texture;
         if (tex_view->texture && tex_view->texture->image) {
             const char* image_uri = tex_view->texture->image->uri;
-            if (image_uri) {
+            if (image_uri && texture != nullptr) {
                 char full_path[1024];
                 snprintf(full_path, sizeof(full_path), "assets/%s", image_uri);
                 *texture = graphics_load_texture(full_path);

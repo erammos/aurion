@@ -24,6 +24,9 @@ camera_update(g_camera* camera, vec3 pos, vec3 up, float yaw, float pitch) {
     glm_translate(camera->view ,(vec3){-pos[0], -pos[1], -pos[2]});
     glm_vec3_copy(pos, camera->pos);
 }
+void camera_look_at(g_camera* camera, vec3 target, vec3 up) {
+    glm_lookat(camera->pos, target, up, camera->view);
+}
 void
 camera_set_perspective(g_camera* camera, float fov, float aspect, float near, float far) {
     glm_perspective(fov, aspect, near, far, camera->projection);

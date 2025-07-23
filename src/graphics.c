@@ -301,7 +301,7 @@ graphics_load_texture(const char* path) {
 }
 
 c_mesh
-graphics_load_obj(const char* path, c_texture * texture) {
+graphics_load_model(const char* path, c_texture * texture) {
     const char* dot = strrchr(path, '.');
 
     c_mesh mesh;
@@ -353,7 +353,7 @@ graphics_create_terrain(int terrain_width, int terrain_height) {
     unsigned int indices[(terrain_width - 1) * (terrain_height - 1) * 6];
 
     float perlin_scale = 0.02f;      // Zoom out to create large features
-    float mountain_height = 50.0f;   // A multiplier to make mountains taller
+    float mountain_height = 1.0f;   // A multiplier to make mountains taller
 
     for (int y = 0; y < terrain_height; ++y) {
         for (int x = 0; x < terrain_width; ++x) {
@@ -363,9 +363,9 @@ graphics_create_terrain(int terrain_width, int terrain_height) {
             // Apply the height multiplier
             height *= mountain_height;
 
-            if (x > 10 && x < 40 && y > 10 && y < 40) {
-                height = -12;
-            }
+            // if (x > 10 && x < 40 && y > 10 && y < 40) {
+            //     height = -12;
+            // }
 
             glm_vec3_copy((vec3){(float)x, height, (float)y}, vertices[y * terrain_width + x].position);
             glm_vec2_copy((vec2){(float)x / terrain_width, (float)y / terrain_height},
