@@ -61,7 +61,14 @@ pbr_render(ecs_iter_t* it) {
     graphics_use_camera(camera);
     for (int i = 0; i < it->count; i++) {
         graphics_set_transform(model[i].matrix);
-        graphics_bind_texture(texture[i]);
+        if (texture) {
+            graphics_set_uniform_int("has_texture", 1);
+            graphics_bind_texture(texture[i]);
+        }
+        else {
+            graphics_set_uniform_int("has_texture", 0);
+            graphics_set_uniform_vec3("default_color", (vec3){0.8f, 0.8f, 0.8f}); // A nice grey
+        }
         graphics_draw_mesh(&mesh[i]);
     }
 }
@@ -127,7 +134,7 @@ ecs_init_systems() {
                   {
                       {.id = ecs_pair(ecs_id(c_transform), World), .inout = EcsIn},
                       {.id = ecs_id(c_mesh), .inout = EcsIn},
-                       {.id = ecs_id(c_texture), .inout = EcsIn},
+                       {.id = ecs_id(c_texture), .inout = EcsIn, .oper = EcsOptional},
                        {.id  = UsesPBRShader}
                   },
               .callback = pbr_render});
@@ -270,6 +277,12 @@ ecs_get_world_position(g_entity e) {
 
 c_rotation*
 ecs_get_rotation(g_entity e) {
+    auto p = ecs_get_mut(ecs, e.entity, c_rotation);
+    return p;
+}
+
+c_rotation*
+ecs_get_world_rotation(g_entity e) {
     auto p = ecs_get_mut(ecs, e.entity, c_rotation);
     return p;
 }

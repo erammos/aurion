@@ -150,24 +150,30 @@ main(void) {
     ecs_add_texture(terrain,&terrain_texture);
     ecs_use_pbr_shader(terrain);
 
+
+
+
     //    auto cube = world_create_entity("cube", (vec3){50, 0.5f, 50}, (vec3){1, 1, 2},  (vec3){0, 0, 0}, terrain.entity);
-    g_entity player = ecs_create_entity("player", (vec3){0, 0, 0}, (vec3){1.0f, 1.0f, 1.0f}, (vec3){0, 0, 0}, world);
-    auto e_camera = ecs_create_entity("camera", (vec3){0, 10, -20}, (vec3){1.0f, 1.0f, 1.0f}, (vec3){30, -180, 0},
-                                        world);
+    g_entity player = ecs_create_entity("player", (vec3){0, 0, 0}, (vec3){20.0f, 20.0f, 20.0f}, (vec3){0, 0, 0}, world);
+
+
+    g_entity camera_rig = ecs_create_entity("camera_rig", (vec3){0, 0.0f, 0}, (vec3){1.0f, 1.0f, 1.0f}, (vec3){0, 0, 0},world);
+    g_entity camera_pivot = ecs_create_entity("camera_pivot", (vec3){0, 5, 0}, (vec3){1.0f, 1.0f, 1.0f}, (vec3){0, 0, 0}, camera_rig.entity);
+    g_entity camera_slot = ecs_create_entity("camera_slot", (vec3){0, 5, -20}, (vec3){1.0f, 1.0f, 1.0f}, (vec3){30, -180, 0}, camera_pivot.entity);
+    g_entity e_camera = ecs_create_entity("camera", (vec3){0, 0, 0}, (vec3){1.0f, 1.0f, 1.0f}, (vec3){0, 0, 0}, camera_slot.entity);
 
   //  auto mesh_obj = graphics_load_model("assets/sphere.obj");
-    auto mesh_obj = graphics_load_model("assets/skeleton.gltf", nullptr);
+    auto mesh_obj = graphics_load_model("assets/character.gltf", nullptr);
     ecs_add_mesh(player, &mesh_obj);
-    ecs_add_texture(player, &terrain_texture);
     ecs_use_pbr_shader(player);
 
     auto orb_obj = graphics_load_model("assets/sphere.gltf", nullptr);
     g_entity light_origin = ecs_create_entity("origin", (vec3){0.0f, 0.0f, 0}, (vec3){1.0f, 1.0f, 1.0f}, (vec3){0, 0, 0}, player.entity);
-    g_entity light = ecs_create_entity("light", (vec3){0, 3.0f, 10}, (vec3){1.0f, 1.0f, 1.0f}, (vec3){0, 0, 0}, light_origin.entity);
+    g_entity light = ecs_create_entity("light", (vec3){0, 0.1f, 0.1f}, (vec3){0.01f, 0.01f, 0.01f}, (vec3){0, 0, 0}, light_origin.entity);
     ecs_add_mesh(light, &orb_obj);
     ecs_use_emissive_shader(light,(c_emission){.centerPosition = {0.0,0.0,0.0},
-               .orbColor = {1.0,0.8,1.0},
-               .intensity = 1000.0f,
+               .orbColor = {1.0,0.9,1.0},
+               .intensity = 1.025f,
                .radius = 1.01f});
 
     // for (int i = 0 ; i < 10; i++) {
@@ -201,24 +207,34 @@ main(void) {
         running = input_update(input_axis, mouse_pos);
 
         player_move(player, mouse_pos, input_axis, 10, 0.5f, delta, mesh_terrain);
-       auto players_pos = ecs_get_world_position(player);
-        glm_ivec3_add(players_pos.position,(vec3) {0,10,-10},camera.pos);
-        camera_look_at(&camera, players_pos.position,(vec3){0,1,0});
 
         ecs_reset_entity(light_origin);
+        ecs_translate_entity(light_origin,(vec3){0.0f, 0.0f, 0.0f});
         ecs_rotate_entity(light_origin,offset,(vec3) {0,1,0});
         offset+=delta * 100.0f;
-        ecs_run_update_system(delta);
 
-       //  mat4* model = ecs_get_world_transform(e_camera);
-       // // ecs_scale_entity(e_camera,)
-       //  glm_mat4_inv(*model, camera.view);
+
+        auto player_pos = ecs_get_position(player);
+        auto player_rotation = ecs_get_rotation(player);
+        auto player_scale = ecs_get_scale(player);
+
+        // auto camera_rig_position = ecs_get_position(camera_rig);
+        //
+        // camera_rig_position->position[0] = player_pos.position[0];
+        // camera_rig_position->position[1] = player_pos.position[1];
+        // camera_rig_position->position[2] = player_pos.position[2];
+        ecs_transform_entity(camera_rig,player_pos->position,(vec3) {1.0f,1.0f,1.0f},(vec3){0.0f,player_rotation->rotation[1],0.0f});
+       //  ecs_run_update_system(delta);
+
+        ecs_run_update_system(delta);
+        mat4* model = ecs_get_world_transform(e_camera);
+        glm_mat4_inv(*model, camera.view);
 
 
         graphics_begin();
         auto pos = ecs_get_world_position(light);
-        auto player_pos = ecs_get_world_position(player);
-        ecs_set_light(pos.position,player_pos.position,(vec3){1.0f,1.0f,1.0f});
+        auto player_pos1 = ecs_get_world_position(player);
+        ecs_set_light(pos.position,player_pos1.position,(vec3){1.0f,0.9f,1.0f});
         ecs_set_camera(&camera);
         ecs_run_render_system();
 

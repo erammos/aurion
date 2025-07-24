@@ -7,6 +7,9 @@ in VS_OUT {
     vec2 TexCoords;
 } fs_in;
 
+
+uniform bool has_texture;      // Flag to control which color source to use
+uniform vec3 default_color;
 uniform sampler2D texture_diffuse1;
 uniform vec3 lightPos;
 uniform vec3 lightColor;
@@ -15,8 +18,15 @@ uniform vec3 viewPos;
 
 void main()
 {
-    vec3 color = texture(texture_diffuse1, fs_in.TexCoords).rgb;
-    float ambient_strength = 0.3f;
+
+    vec3 color;
+    if (has_texture) {
+        color = texture(texture_diffuse1, fs_in.TexCoords).rgb;
+    } else {
+        color = default_color;
+    }
+
+    float ambient_strength = 0.7f;
     vec3 ambient_color = lightColor * ambient_strength;
     vec3 normal = normalize(fs_in.Normal);
     vec3 light_dir = normalize(lightPos - fs_in.FragPos);

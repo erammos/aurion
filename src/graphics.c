@@ -1,4 +1,3 @@
-#pragma once
 #include "graphics.h"
 #include <SDL2/SDL.h>
 #include <assets.h>
