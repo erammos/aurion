@@ -94,37 +94,62 @@ float get_height_on_terrain(float x, float z, c_mesh terrain) {
 
     return final_height;
 }
-void
-player_move(g_entity e, vec3 mouse_pos, vec3 input_axis, float speed, float sensitivity, float dt,
-            c_mesh mesh_terrain) {
-
-    c_rotation* g_rotation = ecs_get_rotation(e);
-    vec2 dir;
-    float scale_v = speed * dt * input_axis[1];
-    float scale_h = speed * dt * -input_axis[0];
-    dir[0] = sin(glm_rad(g_rotation->rotation[1]));
-    dir[1] = cos(glm_rad(g_rotation->rotation[1]));
-    sprintf(front_log, "%f %f", input_axis[0], input_axis[1]);
-    sprintf(rot_log, "%f %f %f", g_rotation->rotation[0], g_rotation->rotation[1], g_rotation->rotation[2]);
+void player_move(g_entity e, vec3 mouse_pos, vec3 input_axis, float speed, float sensitivity, float dt, c_mesh mesh_terrain) {
+    // Get the player's core components
     c_position* g_pos = ecs_get_position(e);
-    c_scale* g_scale = ecs_get_scale(e);
+    // Use the existing c_rotation component to store yaw and pitch
+    c_rotation* g_rotation = ecs_get_rotation(e);
 
-    g_pos->position[0] += scale_v * dir[0];
-    g_pos->position[2] += scale_v * dir[1];
-    g_pos->position[0] += scale_h * dir[1];
-    g_pos->position[2] -= scale_h * dir[0];
-    g_pos->position[1] = get_height_on_terrain(g_pos->position[0], g_pos->position[2], mesh_terrain);
+    // 1. UPDATE ANGLES based on mouse input
+    // g_rotation->rotation[1] will be our Yaw
+    // g_rotation->rotation[0] will be our Pitch
+    g_rotation->rotation[1] += mouse_pos[0] * sensitivity;
+    g_rotation->rotation[0] -= mouse_pos[1] * sensitivity;
 
-    g_rotation->rotation[1] -= sensitivity * mouse_pos[0];
-    g_rotation->rotation[0] += sensitivity * mouse_pos[1];
-    g_rotation->rotation[2] = 0;
+    // 2. CLAMP PITCH to prevent looking too far up or down
+    if (g_rotation->rotation[0] > 89.0f) {
+        g_rotation->rotation[0] = 89.0f;
+    }
+    if (g_rotation->rotation[0] < -89.0f) {
+        g_rotation->rotation[0] = -89.0f;
+    }
 
-    ecs_reset_entity(e);
-    ecs_translate_entity(e, g_pos->position);
-    ecs_rotate_entity(e, g_rotation->rotation[1], (vec3){0, 1, 0});
-    ecs_rotate_entity(e, g_rotation->rotation[0], (vec3){1, 0, 0});
-    ecs_scale_entity(e, g_scale->scale);
+    // 3. CALCULATE DIRECTION VECTORS from the new angles
+    vec3 front;
+    front[0] = cos(glm_rad(g_rotation->rotation[1])) * cos(glm_rad(g_rotation->rotation[0]));
+    front[1] = sin(glm_rad(g_rotation->rotation[0]));
+    front[2] = sin(glm_rad(g_rotation->rotation[1])) * cos(glm_rad(g_rotation->rotation[0]));
+    glm_vec3_normalize(front);
 
+    // Also re-calculate the Right and Up vectors
+    vec3 right, up;
+    glm_vec3_cross(front, (vec3){0.0f, 1.0f, 0.0f}, right);
+    glm_vec3_normalize(right);
+    glm_vec3_cross(right, front, up);
+    glm_vec3_normalize(up);
+
+    // 4. APPLY MOVEMENT based on input axis and direction vectors
+    vec3 move_horizontal, move_vertical;
+    glm_vec3_scale(front, speed * dt * input_axis[1], move_vertical);   // W/S movement
+    glm_vec3_scale(right, speed * dt * input_axis[0], move_horizontal);  // A/D movement
+
+    glm_vec3_add(g_pos->position, move_vertical, g_pos->position);
+    glm_vec3_add(g_pos->position, move_horizontal, g_pos->position);
+
+    // 5. UPDATE PLAYER HEIGHT based on terrain
+    g_pos->position[1] = get_height_on_terrain(g_pos->position[0], g_pos->position[2], mesh_terrain) + 2.0f; // Eye level adjustment
+
+    // 6. UPDATE ENTITY TRANSFORM for rendering
+    // We create a "look at" matrix from the vectors and then apply the position
+    mat4 look_at_matrix;
+    vec3 center;
+    glm_vec3_add(g_pos->position, front, center);
+    glm_lookat(g_pos->position, center, up, look_at_matrix);
+
+    // The entity's final transform is the inverse of the look_at matrix
+    mat4* world_transform;
+    ecs_get_local_transform(e,&world_transform);
+    glm_mat4_inv(look_at_matrix, *world_transform);
 }
 
 
@@ -154,28 +179,25 @@ main(void) {
 
 
     //    auto cube = world_create_entity("cube", (vec3){50, 0.5f, 50}, (vec3){1, 1, 2},  (vec3){0, 0, 0}, terrain.entity);
-    g_entity player = ecs_create_entity("player", (vec3){0, 0, 0}, (vec3){20.0f, 20.0f, 20.0f}, (vec3){0, 0, 0}, world);
+    g_entity player = ecs_create_entity("player", (vec3){0, 100, 0}, (vec3){1.0f, 1.0f, 1.0f}, (vec3){0, 0, 0}, world);
 
 
-    g_entity camera_rig = ecs_create_entity("camera_rig", (vec3){0, 0.0f, 0}, (vec3){1.0f, 1.0f, 1.0f}, (vec3){0, 0, 0},world);
-    g_entity camera_pivot = ecs_create_entity("camera_pivot", (vec3){0, 5, 0}, (vec3){1.0f, 1.0f, 1.0f}, (vec3){0, 0, 0}, camera_rig.entity);
-    g_entity camera_slot = ecs_create_entity("camera_slot", (vec3){0, 5, -20}, (vec3){1.0f, 1.0f, 1.0f}, (vec3){30, -180, 0}, camera_pivot.entity);
-    g_entity e_camera = ecs_create_entity("camera", (vec3){0, 0, 0}, (vec3){1.0f, 1.0f, 1.0f}, (vec3){0, 0, 0}, camera_slot.entity);
-    ecs_add_camera(e_camera,1.777f);
+    // g_entity camera_rig = ecs_create_entity("camera_rig", (vec3){0, 0.0f, 0}, (vec3){1.0f, 1.0f, 1.0f}, (vec3){0, 0, 0},world);
+    // g_entity camera_pivot = ecs_create_entity("camera_pivot", (vec3){0, 5, 0}, (vec3){1.0f, 1.0f, 1.0f}, (vec3){0, 0, 0}, camera_rig.entity);
+    // g_entity camera_slot = ecs_create_entity("camera_slot", (vec3){0, 5, -20}, (vec3){1.0f, 1.0f, 1.0f}, (vec3){30, -180, 0}, camera_pivot.entity);
+    // g_entity e_camera = ecs_create_entity("camera", (vec3){0, 0, 0}, (vec3){1.0f, 1.0f, 1.0f}, (vec3){0, 0, 0}, camera_slot.entity);
 
-  //  auto mesh_obj = graphics_load_model("assets/sphere.obj");
-    auto mesh_obj = graphics_load_model("assets/skeleton.gltf", nullptr);
-    ecs_add_mesh(player, &mesh_obj);
+    ecs_add_camera(player,1.777f);
     ecs_use_pbr_shader(player);
 
     auto orb_obj = graphics_load_model("assets/sphere.gltf", nullptr);
-    g_entity light_origin = ecs_create_entity("origin", (vec3){0.0f, 0.0f, 0}, (vec3){1.0f, 1.0f, 1.0f}, (vec3){0, 0, 0}, player.entity);
-    g_entity light = ecs_create_entity("light", (vec3){0, 0.1f, 0.1f}, (vec3){0.01f, 0.01f, 0.01f}, (vec3){0, 0, 0}, light_origin.entity);
+    g_entity light_origin = ecs_create_entity("origin", (vec3){50.0f, 0.0f, 50}, (vec3){1.0f, 1.0f, 1.0f}, (vec3){0, 0, 0}, world);
+    g_entity light = ecs_create_entity("light", (vec3){0, 0.0f, 10.0f}, (vec3){1.0f, 1.0f, 1.0f}, (vec3){0, 0, 0}, light_origin.entity);
     ecs_add_mesh(light, &orb_obj);
     ecs_use_emissive_shader(light,(c_emission){.centerPosition = {0.0,0.0,0.0},
                .orbColor = {1.0,0.9,1.0},
                .intensity = 1.025f,
-               .radius = 1.01f});
+               .radius = 5.0f});
 
     // for (int i = 0 ; i < 10; i++) {
     //
@@ -205,10 +227,10 @@ main(void) {
         prev_time = current_time;
         running = input_update(input_axis, mouse_pos);
 
-        player_move(player, mouse_pos, input_axis, 10, 0.5f, delta, mesh_terrain);
+        player_move(player, mouse_pos, input_axis, 50, 0.5f, delta, mesh_terrain);
 
         ecs_reset_entity(light_origin);
-        ecs_translate_entity(light_origin,(vec3){0.0f, 0.0f, 0.0f});
+        ecs_translate_entity(light_origin,(vec3){50.0f, 10.0f, 50.0f});
         ecs_rotate_entity(light_origin,offset,(vec3) {0,1,0});
         offset+=delta * 100.0f;
 
@@ -222,7 +244,7 @@ main(void) {
         // camera_rig_position->position[0] = player_pos.position[0];
         // camera_rig_position->position[1] = player_pos.position[1];
         // camera_rig_position->position[2] = player_pos.position[2];
-        ecs_transform_entity(camera_rig,player_pos->position,(vec3) {1.0f,1.0f,1.0f},(vec3){0.0f,player_rotation->rotation[1],0.0f});
+      //  ecs_transform_entity(camera_rig,player_pos->position,(vec3) {1.0f,1.0f,1.0f},(vec3){0.0f,player_rotation->rotation[1],0.0f});
        //  ecs_run_update_system(delta);
 
         ecs_run_update_system(delta);
@@ -231,8 +253,9 @@ main(void) {
 
         graphics_begin();
         auto pos = ecs_get_world_position(light);
-        auto player_pos1 = ecs_get_world_position(player);
-        ecs_set_light(pos.position,player_pos1.position,(vec3){1.0f,0.9f,1.0f});
+        auto player_pos1 = ecs_get_position(player);
+        sprintf(front_log,"-- %f %f",player_pos1->position[0],player_pos1->position[2]);
+        ecs_set_light(pos.position,player_pos1->position,(vec3){1.0f,0.9f,1.0f});
         ecs_run_render_system();
 
         gui_begin();
