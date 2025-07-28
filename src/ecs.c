@@ -1,32 +1,20 @@
 #include <ecs.h>
+
 #include "cglm/affine-pre.h"
 #include "cglm/euler.h"
 #include "cglm/mat4.h"
 #include "cglm/types.h"
 #include "cglm/util.h"
+#include "defines.h"
 #include "flecs.h"
 #include "flecs/addons/flecs_c.h"
-#include "graphics.h"
 static ecs_world_t* ecs;
 static ecs_entity_t update_system;
 static ecs_entity_t pbr_render_system;
 static ecs_entity_t emissive_render_system;
 
 
-ECS_COMPONENT_DECLARE(c_transform);
-ECS_COMPONENT_DECLARE(c_position);
-ECS_COMPONENT_DECLARE(c_rotation);
-ECS_COMPONENT_DECLARE(c_scale);
-ECS_COMPONENT_DECLARE(c_mesh);
-ECS_COMPONENT_DECLARE(c_texture);
-ECS_COMPONENT_DECLARE(g_light);
-ECS_COMPONENT_DECLARE(g_camera);
-ECS_COMPONENT_DECLARE(c_emission);
 
-ECS_TAG_DECLARE(World);
-ECS_TAG_DECLARE(Local);
-ECS_TAG_DECLARE(UsesPBRShader);
-ECS_TAG_DECLARE(UsesEmissiveShader);
 ecs_entity_t world;
 
 void
@@ -36,11 +24,28 @@ update_transform(ecs_iter_t* it) {
     c_transform* world = ecs_field(it, c_transform, 1);
     c_transform* parent_world = ecs_field(it, c_transform, 2);
 
+    const c_camera* cam = ecs_field(it, c_camera, 3);
+
+
     // Inner loop, iterates entities in archetype
     for (int i = 0; i < it->count; i++) {
         glm_mat4_copy(local[i].matrix, world[i].matrix);
         if (parent_world) {
             glm_mat4_mul(parent_world[i].matrix, world[i].matrix, world[i].matrix);
+        }
+
+        if (cam) {
+            // Get a mutable pointer to the singleton s_camera_data
+            const s_camera_data* active_cam = ecs_singleton_get(it->world, s_camera_data);
+
+            // The view matrix is the inverse of the camera entity's final world transform
+            glm_mat4_inv(world[i].matrix, active_cam->view);
+
+            // Copy the projection matrix from the component to the singleton
+            glm_mat4_copy(cam[i].projection, active_cam->projection);
+
+            // Also store the camera's world position for lighting, etc.
+            glm_mat4_mulv3(world[i].matrix, (vec3){0.0f, 0.0f, 0.0f}, 1.0f, active_cam->pos);
         }
         //     auto name = ecs_get_name(ecs, it->entities[i]);
         //    printf("%s:\n", name);
@@ -55,10 +60,12 @@ pbr_render(ecs_iter_t* it) {
     c_mesh* mesh = ecs_field(it, c_mesh, 1);
     c_texture* texture = ecs_field(it, c_texture, 2);
     const g_light* light = ecs_singleton_get(it->world, g_light);
-    const g_camera* camera = ecs_singleton_get(it->world, g_camera);
+    const s_camera_data * camera = ecs_singleton_get(it->world, s_camera_data);
     graphics_use_shader(&g_pbr_shader);
     graphics_set_light(light->pos, light->viewPos, light->lightColor);
-    graphics_use_camera(camera);
+    graphics_set_uniform_mat4("view", camera->view);
+    graphics_set_uniform_mat4("projection", camera->projection);
+
     for (int i = 0; i < it->count; i++) {
         graphics_set_transform(model[i].matrix);
         if (texture) {
@@ -79,9 +86,10 @@ emissive_render(ecs_iter_t* it) {
     c_transform* model = ecs_field(it, c_transform, 0);
     c_mesh* mesh = ecs_field(it, c_mesh, 1);
     c_emission* emission = ecs_field(it, c_emission, 2);
-    const g_camera* camera = ecs_singleton_get(it->world, g_camera);
+    const s_camera_data * camera = ecs_singleton_get(it->world, s_camera_data);
     graphics_use_shader(&g_cel_shader);
-    graphics_use_camera(camera);
+    graphics_set_uniform_mat4("view", camera->view);
+    graphics_set_uniform_mat4("projection", camera->projection);
 
     for (int i = 0; i < it->count; i++) {
         graphics_set_transform(model[i].matrix);
@@ -104,6 +112,9 @@ ecs_init_systems() {
     ECS_COMPONENT_DEFINE(ecs, c_scale);
     ECS_COMPONENT_DEFINE(ecs, c_texture);
     ECS_COMPONENT_DEFINE(ecs, c_emission);
+    ECS_COMPONENT_DEFINE(ecs, c_camera);
+    ECS_COMPONENT_DEFINE(ecs, s_camera_data);
+
 
 
     ECS_TAG_DEFINE(ecs, World);
@@ -125,7 +136,10 @@ ecs_init_systems() {
                     .src.id = EcsCascade,
                     .oper = EcsOptional
 
-                   }},
+                   },
+                   {.id = ecs_id(c_camera), .inout = EcsIn, .oper = EcsOptional}
+                  },
+
               .callback = update_transform});
 
     pbr_render_system = ecs_system(
@@ -150,6 +164,8 @@ ecs_init_systems() {
               },
           .callback = emissive_render});
     world = ecs_entity(ecs, {.name = "root"});
+
+    ecs_singleton_set(ecs, s_camera_data, {0});
 }
 
 void
@@ -243,10 +259,21 @@ void ecs_set_light(vec3 pos, vec3 viewPos, vec3 lightColor)
     ECS_COMPONENT_DEFINE(ecs, g_light);
     ecs_singleton_set(ecs,g_light, {.pos = {pos[0], pos[1], pos[2]}, .lightColor = {lightColor[0], lightColor[1], lightColor[2]} , .viewPos = {viewPos[0], viewPos[1], viewPos[2]}});
  }
-void ecs_set_camera(g_camera * camera)
-{
-    ECS_COMPONENT_DEFINE(ecs, g_camera);
-    ecs_singleton_set_ptr(ecs,g_camera,camera);
+
+void ecs_add_camera(g_entity e,float aspectRatio) {
+   ECS_COMPONENT_DEFINE(ecs,c_camera);
+    mat4 projection_matrix;
+    glm_perspective(DEG2RAD(45), aspectRatio, 0.1f, 1000,projection_matrix);
+
+    ecs_set(ecs, e.entity,c_camera, {
+     .projection = {
+         {projection_matrix[0][0], projection_matrix[0][1], projection_matrix[0][2], projection_matrix[0][3]},
+         {projection_matrix[1][0], projection_matrix[1][1], projection_matrix[1][2], projection_matrix[1][3]},
+         {projection_matrix[2][0], projection_matrix[2][1], projection_matrix[2][2], projection_matrix[2][3]},
+         {projection_matrix[3][0], projection_matrix[3][1], projection_matrix[3][2], projection_matrix[3][3]}
+     }
+ });
+
 }
 void
 ecs_get_local_transform(g_entity e, mat4** out) {
@@ -286,6 +313,7 @@ ecs_get_world_rotation(g_entity e) {
     auto p = ecs_get_mut(ecs, e.entity, c_rotation);
     return p;
 }
+
 
 c_scale*
 ecs_get_scale(g_entity e) {

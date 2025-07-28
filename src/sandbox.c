@@ -161,9 +161,10 @@ main(void) {
     g_entity camera_pivot = ecs_create_entity("camera_pivot", (vec3){0, 5, 0}, (vec3){1.0f, 1.0f, 1.0f}, (vec3){0, 0, 0}, camera_rig.entity);
     g_entity camera_slot = ecs_create_entity("camera_slot", (vec3){0, 5, -20}, (vec3){1.0f, 1.0f, 1.0f}, (vec3){30, -180, 0}, camera_pivot.entity);
     g_entity e_camera = ecs_create_entity("camera", (vec3){0, 0, 0}, (vec3){1.0f, 1.0f, 1.0f}, (vec3){0, 0, 0}, camera_slot.entity);
+    ecs_add_camera(e_camera,1.777f);
 
   //  auto mesh_obj = graphics_load_model("assets/sphere.obj");
-    auto mesh_obj = graphics_load_model("assets/character.gltf", nullptr);
+    auto mesh_obj = graphics_load_model("assets/skeleton.gltf", nullptr);
     ecs_add_mesh(player, &mesh_obj);
     ecs_use_pbr_shader(player);
 
@@ -196,8 +197,6 @@ main(void) {
 
     vec3 input_axis = {};
     vec3 mouse_pos = {0};
-    g_camera camera = camera_create(graphics_get_width(), graphics_get_height());
-    camera_update(&camera, (vec3){50, 1.0f, 50 - 5}, (vec3){0, 1, 0}, -180, 0);
     bool running = true;
     float offset = 0.0f;
     while (running) {
@@ -227,15 +226,13 @@ main(void) {
        //  ecs_run_update_system(delta);
 
         ecs_run_update_system(delta);
-        mat4* model = ecs_get_world_transform(e_camera);
-        glm_mat4_inv(*model, camera.view);
+
 
 
         graphics_begin();
         auto pos = ecs_get_world_position(light);
         auto player_pos1 = ecs_get_world_position(player);
         ecs_set_light(pos.position,player_pos1.position,(vec3){1.0f,0.9f,1.0f});
-        ecs_set_camera(&camera);
         ecs_run_render_system();
 
         gui_begin();

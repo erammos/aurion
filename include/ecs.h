@@ -3,6 +3,7 @@
 #include <cglm/cglm.h>
 #include <flecs.h>
 #include <graphics.h>
+#include <components.h>
 #include "flecs/addons/flecs_c.h"
 
 typedef struct {
@@ -33,4 +34,5 @@ void ecs_add_texture(g_entity e, c_texture * t);
 void ecs_set_camera(g_camera * camera);
 void ecs_use_pbr_shader(g_entity e);
 void ecs_use_emissive_shader(g_entity e, c_emission emision);
+void ecs_add_camera(g_entity e,float aspectRatio);
 #endif

@@ -4,62 +4,8 @@
 #ifndef M_PI
 #define M_PI (3.14159265358979323846)
 #endif
+#include <components.h>
 
-typedef struct {
-    unsigned int id;
-
-} g_shader;
-
-typedef struct {
-    vec3 position;
-    vec3 normal;
-    vec2 uv;
-
-} g_vertex;
-
-typedef struct {
-    unsigned int id;
-    const char* type;
-} c_texture;
-
-typedef struct {
-    g_vertex* vertices;
-    unsigned int* indices;
-    size_t num_v, num_i;
-    unsigned int vao, vbo, ebo;
-} c_mesh;
-
-g_shader g_pbr_shader;
-g_shader g_cel_shader;
-
-
-typedef struct { c_texture texture; } c_diffuse_texture;
-typedef struct { c_texture texture; } c_specular_texture;
-typedef struct { c_texture texture; } c_normal_map;
-
-typedef struct { vec4 color; } c_tint_color;
-typedef struct { float shininess; } c_shininess;
-
-typedef struct {vec3 pos; vec3 viewPos; vec3 lightColor; } g_light;
-typedef struct emission {
-    vec3 orbColor;
-    float intensity;
-    vec3 centerPosition;
-    float radius;
-} c_emission;
-
-typedef struct {
-    mat4 matrix;
-} c_transform;
-typedef struct {
-    vec3 position; 
-} c_position;
-typedef struct {
-    vec3 rotation; 
-} c_rotation;
-typedef struct {
-    vec3 scale; 
-} c_scale;
 
 double degrees(double radians);
 double radians(double degrees);
