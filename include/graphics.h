@@ -35,4 +35,6 @@ void graphics_set_uniform_float(const char* name, float value);
 void graphics_set_uniform_mat4(const char* name, mat4 matrix);
 void graphics_set_uniform_int(const char* name, int value);
 void graphics_bind_texture(c_texture tex);
+unsigned int graphics_load_cubemap(const char** faces);
+c_mesh graphics_create_skybox_mesh();
 

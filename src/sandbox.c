@@ -165,6 +165,13 @@ main(void) {
     gui_init(window);
     ecs_init_systems();
 
+    const char* faces[] = {
+        "assets/skybox/px.png", "assets/skybox/nx.png",
+        "assets/skybox/py.png", "assets/skybox/ny.png",
+        "assets/skybox/pz.png", "assets/skybox/nz.png"
+    };
+    unsigned int cubemap_id = graphics_load_cubemap(faces);
+    g_skybox_shader = graphics_load_shaders("assets/skybox.vert", "assets/skybox.frag");
      g_pbr_shader = graphics_load_shaders( "assets/light.vert", "assets/light.frag");
     g_cel_shader = graphics_load_shaders("assets/emissive.vert", "assets/emissive.frag");
 
@@ -178,26 +185,32 @@ main(void) {
 
 
 
+    g_entity skybox = ecs_create_entity("skybox", (vec3){0, 0, 0}, (vec3){1.0f, 1.0f, 1.0f}, (vec3){0, 0, 0}, world);
+    ecs_add_skybox(skybox, cubemap_id);
     //    auto cube = world_create_entity("cube", (vec3){50, 0.5f, 50}, (vec3){1, 1, 2},  (vec3){0, 0, 0}, terrain.entity);
     g_entity player = ecs_create_entity("player", (vec3){0, 100, 0}, (vec3){1.0f, 1.0f, 1.0f}, (vec3){0, 0, 0}, world);
 
+    g_entity enemy = ecs_create_entity("enemy", (vec3){50, 0, 50}, (vec3){20.0f, 20.0f, 20.0f}, (vec3){0, 0, 0}, world);
+    auto enemy_mesh = graphics_load_model("assets/character.gltf", nullptr);
+    ecs_add_mesh(enemy,&enemy_mesh);
+    ecs_use_pbr_shader(enemy);
 
     // g_entity camera_rig = ecs_create_entity("camera_rig", (vec3){0, 0.0f, 0}, (vec3){1.0f, 1.0f, 1.0f}, (vec3){0, 0, 0},world);
     // g_entity camera_pivot = ecs_create_entity("camera_pivot", (vec3){0, 5, 0}, (vec3){1.0f, 1.0f, 1.0f}, (vec3){0, 0, 0}, camera_rig.entity);
     // g_entity camera_slot = ecs_create_entity("camera_slot", (vec3){0, 5, -20}, (vec3){1.0f, 1.0f, 1.0f}, (vec3){30, -180, 0}, camera_pivot.entity);
     // g_entity e_camera = ecs_create_entity("camera", (vec3){0, 0, 0}, (vec3){1.0f, 1.0f, 1.0f}, (vec3){0, 0, 0}, camera_slot.entity);
 
-    ecs_add_camera(player,1.777f);
+    ecs_add_camera(player,(float)graphics_get_width() / (float)graphics_get_height());
     ecs_use_pbr_shader(player);
 
     auto orb_obj = graphics_load_model("assets/sphere.gltf", nullptr);
-    g_entity light_origin = ecs_create_entity("origin", (vec3){50.0f, 0.0f, 50}, (vec3){1.0f, 1.0f, 1.0f}, (vec3){0, 0, 0}, world);
-    g_entity light = ecs_create_entity("light", (vec3){0, 0.0f, 10.0f}, (vec3){1.0f, 1.0f, 1.0f}, (vec3){0, 0, 0}, light_origin.entity);
+    g_entity light_origin = ecs_create_entity("origin", (vec3){300.0f, 200.0f, 300}, (vec3){20.0f, 20.0f, 20.0f}, (vec3){0, 0, 0}, world);
+    g_entity light = ecs_create_entity("light", (vec3){0, 0.0f, 0.0f}, (vec3){1.0f, 1.0f, 1.0f}, (vec3){0, 0, 0}, light_origin.entity);
     ecs_add_mesh(light, &orb_obj);
     ecs_use_emissive_shader(light,(c_emission){.centerPosition = {0.0,0.0,0.0},
                .orbColor = {1.0,0.9,1.0},
                .intensity = 1.025f,
-               .radius = 5.0f});
+               .radius = 60.0f});
 
     // for (int i = 0 ; i < 10; i++) {
     //
@@ -229,10 +242,10 @@ main(void) {
 
         player_move(player, mouse_pos, input_axis, 50, 0.5f, delta, mesh_terrain);
 
-        ecs_reset_entity(light_origin);
-        ecs_translate_entity(light_origin,(vec3){50.0f, 10.0f, 50.0f});
-        ecs_rotate_entity(light_origin,offset,(vec3) {0,1,0});
-        offset+=delta * 100.0f;
+        // ecs_reset_entity(light_origin);
+        // ecs_translate_entity(light_origin,(vec3){50.0f, 10.0f, 50.0f});
+        // ecs_rotate_entity(light_origin,offset,(vec3) {0,1,0});
+        // offset+=delta * 100.0f;
 
 
         auto player_pos = ecs_get_position(player);

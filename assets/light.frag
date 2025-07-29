@@ -26,7 +26,7 @@ void main()
         color = default_color;
     }
 
-    float ambient_strength = 0.7f;
+    float ambient_strength = 0.5f;
     vec3 ambient_color = lightColor * ambient_strength;
     vec3 normal = normalize(fs_in.Normal);
     vec3 light_dir = normalize(lightPos - fs_in.FragPos);

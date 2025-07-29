@@ -29,6 +29,7 @@ typedef struct {
 
 g_shader g_pbr_shader;
 g_shader g_cel_shader;
+g_shader g_skybox_shader;
 
 
 typedef struct { c_texture texture; } c_diffuse_texture;
@@ -69,6 +70,9 @@ typedef struct {
     mat4 projection;
 } s_camera_data;
 
+typedef struct {
+    unsigned int cubemap_id;
+} c_skybox;
 
 
 ECS_COMPONENT_DECLARE(c_transform);
@@ -82,6 +86,8 @@ ECS_COMPONENT_DECLARE(g_camera);
 ECS_COMPONENT_DECLARE(c_camera);
 ECS_COMPONENT_DECLARE(s_camera_data);
 ECS_COMPONENT_DECLARE(c_emission);
+ECS_COMPONENT_DECLARE(c_skybox);
+
 
 ECS_TAG_DECLARE(World);
 ECS_TAG_DECLARE(Local);

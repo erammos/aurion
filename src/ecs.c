@@ -8,10 +8,12 @@
 #include "defines.h"
 #include "flecs.h"
 #include "flecs/addons/flecs_c.h"
+#include <glad/glad.h>
 static ecs_world_t* ecs;
 static ecs_entity_t update_system;
 static ecs_entity_t pbr_render_system;
 static ecs_entity_t emissive_render_system;
+static ecs_entity_t skybox_render_system;
 
 
 
@@ -102,6 +104,32 @@ emissive_render(ecs_iter_t* it) {
 }
 
 
+void skybox_render(ecs_iter_t* it) {
+    c_mesh* mesh = ecs_field(it, c_mesh, 0);
+    c_skybox* skybox = ecs_field(it, c_skybox, 1);
+
+    const s_camera_data* camera = ecs_singleton_get(it->world, s_camera_data);
+
+    // Change depth function so depth test passes when values are equal to depth buffer's content
+    glDepthFunc(GL_LEQUAL);
+
+    graphics_use_shader(&g_skybox_shader); // Assuming you load this shader into a global
+    graphics_set_uniform_mat4("view", camera->view);
+    graphics_set_uniform_mat4("projection", camera->projection);
+
+    // Render the skybox cube
+    for (int i = 0; i < it->count; i++) {
+        glBindVertexArray(mesh[i].vao);
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_CUBE_MAP, skybox[i].cubemap_id);
+        glDrawArrays(GL_TRIANGLES, 0, 36);
+        glBindVertexArray(0);
+    }
+
+    glDepthFunc(GL_LESS); // Set depth function back to default
+}
+
+
 void
 ecs_init_systems() {
     ecs = ecs_init();
@@ -114,6 +142,7 @@ ecs_init_systems() {
     ECS_COMPONENT_DEFINE(ecs, c_emission);
     ECS_COMPONENT_DEFINE(ecs, c_camera);
     ECS_COMPONENT_DEFINE(ecs, s_camera_data);
+    ECS_COMPONENT_DEFINE(ecs, c_skybox);
 
 
 
@@ -163,6 +192,17 @@ ecs_init_systems() {
                    {.id  = UsesEmissiveShader}
               },
           .callback = emissive_render});
+
+
+    skybox_render_system = ecs_system(
+        ecs, {.entity = ecs_entity(ecs, {.name = "SkyboxRender", .add = ecs_ids(ecs_dependson(EcsPreFrame))}), // Runs before other render systems
+              .query.terms =
+                  {
+                      {.id = ecs_id(c_mesh)},
+                      {.id = ecs_id(c_skybox)}
+                  },
+              .callback = skybox_render});
+
     world = ecs_entity(ecs, {.name = "root"});
 
     ecs_singleton_set(ecs, s_camera_data, {0});
@@ -273,7 +313,13 @@ void ecs_add_camera(g_entity e,float aspectRatio) {
          {projection_matrix[3][0], projection_matrix[3][1], projection_matrix[3][2], projection_matrix[3][3]}
      }
  });
+}
 
+void ecs_add_skybox(g_entity e, unsigned int skybox_texture) {
+    ECS_COMPONENT_DEFINE(ecs, c_skybox);
+    c_mesh skybox_mesh = graphics_create_skybox_mesh();
+     ecs_add_mesh(e,&skybox_mesh);
+    ecs_set(ecs,e.entity,c_skybox, { .cubemap_id = skybox_texture });
 }
 void
 ecs_get_local_transform(g_entity e, mat4** out) {
@@ -323,6 +369,7 @@ ecs_get_scale(g_entity e) {
 
 void
 ecs_run_render_system() {
+    ecs_run(ecs, skybox_render_system, 0, 0);
     ecs_run(ecs, pbr_render_system, 0, 0);
     ecs_run(ecs, emissive_render_system, 0, 0);
 
