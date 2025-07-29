@@ -191,8 +191,10 @@ main(void) {
     g_entity player = ecs_create_entity("player", (vec3){0, 100, 0}, (vec3){1.0f, 1.0f, 1.0f}, (vec3){0, 0, 0}, world);
 
     g_entity enemy = ecs_create_entity("enemy", (vec3){50, 0, 50}, (vec3){20.0f, 20.0f, 20.0f}, (vec3){0, 0, 0}, world);
-    auto enemy_mesh = graphics_load_model("assets/character.gltf", nullptr);
+    c_texture enemy_texture;
+    auto enemy_mesh = graphics_load_model("assets/character.gltf", &enemy_texture);
     ecs_add_mesh(enemy,&enemy_mesh);
+    ecs_add_texture(enemy,&enemy_texture);
     ecs_use_pbr_shader(enemy);
 
     // g_entity camera_rig = ecs_create_entity("camera_rig", (vec3){0, 0.0f, 0}, (vec3){1.0f, 1.0f, 1.0f}, (vec3){0, 0, 0},world);
