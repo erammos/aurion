@@ -406,40 +406,70 @@ perlin_noise(float x, float y, int octaves, float lacunarity, float persistence)
 
     return total / maxValue;
 }
+static inline float smoothstep(float edge0, float edge1, float x) {
+    // Scale, bias and saturate x to 0..1 range
+    x = (x - edge0) / (edge1 - edge0);
+    x = x > 1.0f ? 1.0f : (x < 0.0f ? 0.0f : x);
+    // Evaluate polynomial
+    return x * x * (3.0f - 2.0f * x);
+}
 
-c_mesh
-graphics_create_terrain(int terrain_width, int terrain_height) {
+c_mesh graphics_create_terrain(int terrain_width, int terrain_height) {
 
-    g_vertex vertices[terrain_width * terrain_height];
-    unsigned int indices[(terrain_width - 1) * (terrain_height - 1) * 6];
+    g_vertex * vertices = calloc(terrain_width * terrain_height,sizeof(g_vertex));
+    unsigned int * indices = calloc( (terrain_width - 1) * (terrain_height - 1) * 6, sizeof(unsigned int));
 
-    float perlin_scale = 0.02f;      // Zoom out to create large features
-    float mountain_height = 1.0f;   // A multiplier to make mountains taller
+    // --- Arena Generation Parameters (Tweak these to change the arena shape) ---
+
+    // Defines the radius of the flat central playable area.
+    const float center_radius = (float)terrain_width * 0.2f;
+    // Defines the radius where the mountains reach their full height.
+    const float mountain_radius = (float)terrain_width * 0.55f;
+    // The maximum height of the mountains at the border.
+    const float mountain_height = 40.0f;
+    // How rugged the mountains are. Higher values mean more jagged peaks.
+    const float mountain_ruggedness = 20.0f;
+    // Controls the scale/zoom of the noise pattern for the entire map.
+    const float perlin_scale = 0.05f;
+
+    // --- Vertex Generation ---
+    const float center_x = (float)terrain_width / 2.0f;
+    const float center_y = (float)terrain_height / 2.0f;
 
     for (int y = 0; y < terrain_height; ++y) {
         for (int x = 0; x < terrain_width; ++x) {
-            // Parameters for smooth mountains: 6 octaves, standard lacunarity, and persistence of 0.5
-            float height = perlin_noise((float)x * perlin_scale, (float)y * perlin_scale, 6, 2.0f, 0.5f);
+            // Calculate the vertex's distance from the center of the map.
+            const float dist_x = (float)x - center_x;
+            const float dist_y = (float)y - center_y;
+            const float dist_from_center = sqrtf(dist_x * dist_x + dist_y * dist_y);
 
-            // Apply the height multiplier
-            height *= mountain_height;
+            // Use smoothstep to create a weight that is 0 in the center and 1 at the edges.
+            // This creates a smooth transition from the flat ground to the mountains.
+            const float mountain_weight = smoothstep(center_radius, mountain_radius, dist_from_center);
 
-            // if (x > 10 && x < 40 && y > 10 && y < 40) {
-            //     height = -12;
-            // }
+            // Generate the base Perlin noise.
+            float noise = perlin_noise((float)x * perlin_scale, (float)y * perlin_scale, 6, 2.0f, 0.5f);
 
-            glm_vec3_copy((vec3){(float)x, height, (float)y}, vertices[y * terrain_width + x].position);
-            glm_vec2_copy((vec2){(float)x / terrain_width, (float)y / terrain_height},
-                          vertices[y * terrain_width + x].uv);
+            // Calculate the final height.
+            // 1. The base height is determined by the "bowl" shape (mountain_weight * mountain_height).
+            // 2. The noise is scaled by the ruggedness and the mountain_weight, making the center smoother
+            //    and the edges more chaotic.
+            const float final_height = (mountain_weight * mountain_height) + (noise * mountain_ruggedness * mountain_weight);
+
+            // Set vertex position and UV coordinates.
+            const int current_vertex = y * terrain_width + x;
+            glm_vec3_copy((vec3){(float)x, final_height, (float)y}, vertices[current_vertex].position);
+            glm_vec2_copy((vec2){(float)x / terrain_width, (float)y / terrain_height}, vertices[current_vertex].uv);
         }
     }
 
-    // Calculate normals
+    // --- Normal Calculation (Unchanged) ---
+    // This part of the logic remains the same, as it correctly calculates normals
+    // based on the final vertex positions.
     for (int y = 0; y < terrain_height; ++y) {
         for (int x = 0; x < terrain_width; ++x) {
-            vec3 normal = {0.0f, 1.0f, 0.0f}; // default normal pointing up
+            vec3 normal = {0.0f, 1.0f, 0.0f}; // Default normal pointing up
 
-            // Compute normal using surrounding vertices
             if (x > 0 && x < terrain_width - 1 && y > 0 && y < terrain_height - 1) {
                 vec3 left, right, down, up;
                 glm_vec3_copy(vertices[y * terrain_width + (x - 1)].position, left);
@@ -451,7 +481,7 @@ graphics_create_terrain(int terrain_width, int terrain_height) {
                 glm_vec3_sub(right, left, dx);
                 glm_vec3_sub(up, down, dy);
 
-                glm_vec3_cross(dx, dy, normal);
+                glm_vec3_cross(dy, dx, normal); // Flipped cross product for correct normal direction
                 glm_vec3_normalize(normal);
             }
 
@@ -459,6 +489,7 @@ graphics_create_terrain(int terrain_width, int terrain_height) {
         }
     }
 
+    // --- Index Generation (Unchanged) ---
     int idx = 0;
     for (int y = 0; y < terrain_height - 1; ++y) {
         for (int x = 0; x < terrain_width - 1; ++x) {
@@ -467,21 +498,23 @@ graphics_create_terrain(int terrain_width, int terrain_height) {
             int bottomLeft = (y + 1) * terrain_width + x;
             int bottomRight = bottomLeft + 1;
 
-            // First triangle (topLeft, bottomLeft, topRight)
             indices[idx++] = topLeft;
             indices[idx++] = bottomLeft;
             indices[idx++] = topRight;
 
-            // Second triangle (topRight, bottomLeft, bottomRight)
             indices[idx++] = topRight;
             indices[idx++] = bottomLeft;
             indices[idx++] = bottomRight;
         }
     }
 
-    auto terrain_mesh = graphics_create_mesh(
-        terrain_width * terrain_height, (terrain_width - 1) * (terrain_height - 1) * 6,vertices, indices);
-    return terrain_mesh;
+    c_mesh mesh = {};
+    mesh.num_v = terrain_width * terrain_height;
+    mesh.vertices = vertices;
+    mesh.indices = indices;
+    mesh.num_i = (terrain_width - 1) * (terrain_height - 1) * 6;
+    graphics_create_gl_buffer(&mesh);
+    return mesh;
 }
 
 static void

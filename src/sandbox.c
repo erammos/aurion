@@ -57,9 +57,7 @@ char rot_log[100] = {0};
 // }
 
 // Gets the height on the terrain mesh at world coordinates (x, z)
-float get_height_on_terrain(float x, float z, c_mesh terrain) {
-    int terrain_width = 100; // Must match the width used in graphics_create_terrain
-    int terrain_depth = 100; // Must match the depth used in graphics_create_terrain
+float get_height_on_terrain(float x, float z, c_mesh terrain, int terrain_width, int terrain_depth) {
 
     // Find the integer grid coordinates by truncating the floats
     int grid_x = (int)x;
@@ -94,7 +92,7 @@ float get_height_on_terrain(float x, float z, c_mesh terrain) {
 
     return final_height;
 }
-void player_move(g_entity e, vec3 mouse_pos, vec3 input_axis, float speed, float sensitivity, float dt, c_mesh mesh_terrain) {
+void player_move(g_entity e, vec3 mouse_pos, vec3 input_axis, float speed, float sensitivity, float dt, c_mesh mesh_terrain, int terrain_width, int terrain_depth) {
     // Get the player's core components
     c_position* g_pos = ecs_get_position(e);
     // Use the existing c_rotation component to store yaw and pitch
@@ -137,7 +135,7 @@ void player_move(g_entity e, vec3 mouse_pos, vec3 input_axis, float speed, float
     glm_vec3_add(g_pos->position, move_horizontal, g_pos->position);
 
     // 5. UPDATE PLAYER HEIGHT based on terrain
-    g_pos->position[1] = get_height_on_terrain(g_pos->position[0], g_pos->position[2], mesh_terrain) + 2.0f; // Eye level adjustment
+    g_pos->position[1] = get_height_on_terrain(g_pos->position[0], g_pos->position[2], mesh_terrain,terrain_width,terrain_depth) + 2.0f; // Eye level adjustment
 
     // 6. UPDATE ENTITY TRANSFORM for rendering
     // We create a "look at" matrix from the vectors and then apply the position
@@ -175,7 +173,9 @@ main(void) {
      g_pbr_shader = graphics_load_shaders( "assets/light.vert", "assets/light.frag");
     g_cel_shader = graphics_load_shaders("assets/emissive.vert", "assets/emissive.frag");
 
-    auto mesh_terrain = graphics_create_terrain(100, 100);
+    auto terrain_width = 500;
+    auto terrain_depth = 500;
+    auto mesh_terrain = graphics_create_terrain(terrain_width, terrain_depth);
     auto terrain = ecs_create_entity("terrain", (vec3){0, 0, 0}, (vec3){1, 1, 1}, (vec3){0, 0, 0}, world);
     auto terrain_texture = graphics_load_texture("assets/marble2.jpg");
     ecs_add_mesh(terrain, &mesh_terrain);
@@ -188,9 +188,9 @@ main(void) {
     g_entity skybox = ecs_create_entity("skybox", (vec3){0, 0, 0}, (vec3){1.0f, 1.0f, 1.0f}, (vec3){0, 0, 0}, world);
     ecs_add_skybox(skybox, cubemap_id);
     //    auto cube = world_create_entity("cube", (vec3){50, 0.5f, 50}, (vec3){1, 1, 2},  (vec3){0, 0, 0}, terrain.entity);
-    g_entity player = ecs_create_entity("player", (vec3){0, 100, 0}, (vec3){1.0f, 1.0f, 1.0f}, (vec3){0, 0, 0}, world);
+    g_entity player = ecs_create_entity("player", (vec3){250, 100, 200}, (vec3){1.0f, 1.0f, 1.0f}, (vec3){0, 0, 0}, world);
 
-    g_entity enemy = ecs_create_entity("enemy", (vec3){50, 0, 50}, (vec3){20.0f, 20.0f, 20.0f}, (vec3){0, 0, 0}, world);
+    g_entity enemy = ecs_create_entity("enemy", (vec3){250, 0, 250}, (vec3){20.0f, 20.0f, 20.0f}, (vec3){0, 0, 0}, world);
     c_texture enemy_texture;
     auto enemy_mesh = graphics_load_model("assets/character.gltf", &enemy_texture);
     ecs_add_mesh(enemy,&enemy_mesh);
@@ -206,7 +206,7 @@ main(void) {
     ecs_use_pbr_shader(player);
 
     auto orb_obj = graphics_load_model("assets/sphere.gltf", nullptr);
-    g_entity light_origin = ecs_create_entity("origin", (vec3){300.0f, 200.0f, 300}, (vec3){20.0f, 20.0f, 20.0f}, (vec3){0, 0, 0}, world);
+    g_entity light_origin = ecs_create_entity("origin", (vec3){300.0f, 50.0f, 1000}, (vec3){20.0f, 20.0f, 20.0f}, (vec3){0, 0, 0}, world);
     g_entity light = ecs_create_entity("light", (vec3){0, 0.0f, 0.0f}, (vec3){1.0f, 1.0f, 1.0f}, (vec3){0, 0, 0}, light_origin.entity);
     ecs_add_mesh(light, &orb_obj);
     ecs_use_emissive_shader(light,(c_emission){.centerPosition = {0.0,0.0,0.0},
@@ -242,29 +242,8 @@ main(void) {
         prev_time = current_time;
         running = input_update(input_axis, mouse_pos);
 
-        player_move(player, mouse_pos, input_axis, 50, 0.5f, delta, mesh_terrain);
-
-        // ecs_reset_entity(light_origin);
-        // ecs_translate_entity(light_origin,(vec3){50.0f, 10.0f, 50.0f});
-        // ecs_rotate_entity(light_origin,offset,(vec3) {0,1,0});
-        // offset+=delta * 100.0f;
-
-
-        auto player_pos = ecs_get_position(player);
-        auto player_rotation = ecs_get_rotation(player);
-        auto player_scale = ecs_get_scale(player);
-
-        // auto camera_rig_position = ecs_get_position(camera_rig);
-        //
-        // camera_rig_position->position[0] = player_pos.position[0];
-        // camera_rig_position->position[1] = player_pos.position[1];
-        // camera_rig_position->position[2] = player_pos.position[2];
-      //  ecs_transform_entity(camera_rig,player_pos->position,(vec3) {1.0f,1.0f,1.0f},(vec3){0.0f,player_rotation->rotation[1],0.0f});
-       //  ecs_run_update_system(delta);
-
+        player_move(player, mouse_pos, input_axis, 50, 0.5f, delta, mesh_terrain,terrain_width,terrain_depth);
         ecs_run_update_system(delta);
-
-
 
         graphics_begin();
         auto pos = ecs_get_world_position(light);

@@ -290,7 +290,6 @@ void ecs_use_emissive_shader(g_entity e, c_emission emission) {
 }
 
 void ecs_add_texture(g_entity e, c_texture* t) {
-    // Now you are passing the pointer directly to ecs_set, which is what it expects.
     ecs_set_ptr(ecs, e.entity, c_texture, t);
 }
 

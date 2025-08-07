@@ -217,6 +217,7 @@ c_mesh assets_load_gltf(const char* path,c_texture* texture) {
             if (image_uri && texture != nullptr) {
                 char full_path[1024];
                 snprintf(full_path, sizeof(full_path), "assets/%s", image_uri);
+                printf("%s\n", full_path);
                 *texture = graphics_load_texture(full_path);
             }
         }
