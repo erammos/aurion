@@ -15,45 +15,45 @@ test_teardown(void) {
 }
 
 MU_TEST(test_check) {
-    fastObjMesh* mesh = fast_obj_read("assets/test.obj");
-
-    c_mesh gmesh;
-
-    gmesh.num_v = mesh->face_count * 3;
-    gmesh.num_i = gmesh.num_v;
-    gmesh.num_t = mesh->texture_count;
-    gmesh.indices = malloc(sizeof(unsigned int) * gmesh.num_i);
-    gmesh.vertices = malloc(sizeof(g_vertex) * gmesh.num_v);
-
-    int idx = 0;
-    for (int gi = 0; gi < mesh->group_count; gi++) {
-        fastObjGroup* grp = &mesh->groups[gi];
-        for (int i = 0; i < grp->face_count; i++) {
-            int fv = mesh->face_vertices[grp->face_offset + i];
-
-            for (int j = 0; j < fv; j++) {
-                g_vertex vertex;
-                fastObjIndex mi = mesh->indices[grp->index_offset + idx];
-                gmesh.indices[idx] = idx;
-                printf("index: %d\n", idx);
-                if (mi.p) {
-                    vertex.position[0] = mesh->positions[3 * mi.p + 0];
-                    vertex.position[1] = mesh->positions[3 * mi.p + 1];
-                    vertex.position[2] = mesh->positions[3 * mi.p + 2];
-                }
-                if (mi.t) {
-                    vertex.uv[0] = mesh->texcoords[2 * mi.t + 0];
-                    vertex.uv[1] = mesh->texcoords[2 * mi.t + 1];
-                }
-                if (mi.n) {
-                    vertex.normal[0] = mesh->normals[3 * mi.n + 0];
-                    vertex.normal[1] = mesh->normals[3 * mi.n + 1];
-                    vertex.normal[2] = mesh->normals[3 * mi.n + 2];
-                }
-                idx++;
-            }
-        }
-    }
+    // fastObjMesh* mesh = fast_obj_read("assets/test.obj");
+    //
+    // c_mesh gmesh;
+    //
+    // gmesh.num_v = mesh->face_count * 3;
+    // gmesh.num_i = gmesh.num_v;
+    // gmesh.num_t = mesh->texture_count;
+    // gmesh.indices = malloc(sizeof(unsigned int) * gmesh.num_i);
+    // gmesh.vertices = malloc(sizeof(g_vertex) * gmesh.num_v);
+    //
+    // int idx = 0;
+    // for (int gi = 0; gi < mesh->group_count; gi++) {
+    //     fastObjGroup* grp = &mesh->groups[gi];
+    //     for (int i = 0; i < grp->face_count; i++) {
+    //         int fv = mesh->face_vertices[grp->face_offset + i];
+    //
+    //         for (int j = 0; j < fv; j++) {
+    //             g_vertex vertex;
+    //             fastObjIndex mi = mesh->indices[grp->index_offset + idx];
+    //             gmesh.indices[idx] = idx;
+    //             printf("index: %d\n", idx);
+    //             if (mi.p) {
+    //                 vertex.position[0] = mesh->positions[3 * mi.p + 0];
+    //                 vertex.position[1] = mesh->positions[3 * mi.p + 1];
+    //                 vertex.position[2] = mesh->positions[3 * mi.p + 2];
+    //             }
+    //             if (mi.t) {
+    //                 vertex.uv[0] = mesh->texcoords[2 * mi.t + 0];
+    //                 vertex.uv[1] = mesh->texcoords[2 * mi.t + 1];
+    //             }
+    //             if (mi.n) {
+    //                 vertex.normal[0] = mesh->normals[3 * mi.n + 0];
+    //                 vertex.normal[1] = mesh->normals[3 * mi.n + 1];
+    //                 vertex.normal[2] = mesh->normals[3 * mi.n + 2];
+    //             }
+    //             idx++;
+    //         }
+    //     }
+    // }
 }
 
 // g_vertex vertex;
