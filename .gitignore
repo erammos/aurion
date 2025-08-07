@@ -2,4 +2,5 @@
 build
 subprojects/**
 !subprojects/*.wrap
+assets
 .DS_Store
