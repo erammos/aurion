@@ -1,2 +1,2 @@
 Aurion
-- Gane under construction using C, ECS, Opengl
+- Game under construction using C, ECS, Opengl
